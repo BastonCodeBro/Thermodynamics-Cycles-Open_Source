@@ -8,6 +8,29 @@ from streamlit_javascript import st_javascript
 st.set_page_config(page_title="TermoWeb UI", page_icon="⚡", layout="wide")
 plt.style.use('dark_background')
 
+# --- CUSTOM CSS FOR HEADER ---
+st.markdown("""
+    <style>
+    .reportview-container .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+    }
+    .stApp {
+        background-color: #0e1117;
+    }
+    h1 {
+        margin-top: -60px;
+        color: #00d4ff;
+        text-shadow: 0 0 10px rgba(0,212,255,0.5);
+    }
+    .subtitle {
+        color: #88c0d0;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- i18n ---
 def get_browser_lang():
     try:
@@ -79,13 +102,16 @@ dict_t = {
         "p_evap": "P Evaporatore (bar)",
         "p_cond": "P Condensatore (bar)",
         "t_max": "Temp. Max Surrisc. (°C)",
+        "thermocad": "🛠️ ThermoCAD (Ciclo Libero)",
+        "add_pt": "Aggiungi Punto",
+        "clear": "Azzera Ciclo",
     }
 }
 t = dict_t[lang]
 
 # --- MAIN HEADER ---
-st.title(t["main_title"])
-st.markdown(t["subtitle"])
+st.markdown(f"<h1>{t['main_title']}</h1>", unsafe_allow_html=True)
+st.markdown(f"<p class='subtitle'>{t['subtitle']}</p>", unsafe_allow_html=True)
 st.markdown(f"*{t['author']}*")
 st.divider()
 
@@ -96,9 +122,22 @@ c_list = [
     "🔥 Brayton (Gas Turb.)",
     "⚙️ Otto",
     "🛢️ Diesel",
-    "❄️ Frigorifero (Refrigeration)"
+    "❄️ Frigorifero (Refrigeration)",
+    "🛠️ ThermoCAD (Custom)"
 ]
 ciclo = st.sidebar.radio(t["select_cycle"], c_list)
+
+# --- SESSION STATE FOR THERMOCAD ---
+if "cad_points" not in st.session_state:
+    st.session_state["cad_points"] = []
+if "cad_components" not in st.session_state:
+    st.session_state["cad_components"] = []
+
+def get_iapws_robust(**args):
+    try:
+        return IAPWS97(**args)
+    except:
+        return None
 
 
 # --- HELPERS SCHEMATICS ---
@@ -345,7 +384,7 @@ elif "Brayton" in ciclo:
 
     with col_plot:
         st.subheader(t["plots"])
-        tab_ts, tab_pv = st.tabs(["T-s", "P-v"])
+        tab_ts, tab_pv, tab_hs = st.tabs(["T-s", "P-v", "h-s"])
         with tab_ts:
             fig, ax = plt.subplots(figsize=(6, 5))
             ax.set_title("T-s Diagram")
@@ -357,15 +396,24 @@ elif "Brayton" in ciclo:
             ax.plot([s2, s3], [T2_K-273.15, T3], '-', color='red', label="Combust.")
             ax.plot([s3, s4], [T3, T4_K-273.15], '-', color='cyan', label="Turbine")
             ax.plot([s4, s1], [T4_K-273.15, T1], '-', color='blue', label="Exhaust")
+            ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("T (°C)")
             ax.legend(loc="upper left"); st.pyplot(fig)
         
         with tab_pv:
             fig, ax = plt.subplots(figsize=(6, 5))
             ax.set_title("P-v Diagram")
-            # Ideal gas v = RT/P
             v1 = 0.287 * T1_K / (P1*100); v2 = 0.287 * T2_K / (P2*100)
             v3 = 0.287 * T3_K / (P2*100); v4 = 0.287 * T4_K / (P1*100)
-            ax.plot([v1, v2, v3, v4, v1], [P1, P2, P2, P1, P1], '-', color='cyan')
+            ax.plot([v1, v2, v3, v4, v1], [P1, P2, P2, P1, P1], '-o', color='cyan')
+            ax.set_xlabel("v (m³/kg)"); ax.set_ylabel("P (bar)")
+            st.pyplot(fig)
+
+        with tab_hs:
+            fig, ax = plt.subplots(figsize=(6, 5))
+            ax.set_title("h-s Diagram")
+            h1 = cp*T1_K; h2 = cp*T2_K; h3 = cp*T3_K; h4 = cp*T4_K
+            ax.plot([s1, s2, s3, s4, s1], [h1, h2, h3, h4, h1], '-o', color='red')
+            ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("h (kJ/kg)")
             st.pyplot(fig)
 
     with col_schema:
@@ -411,16 +459,28 @@ elif "Otto" in ciclo:
         st.write(f"**{t['pmax']}:** {P3_bar:.2f} bar")
 
     with col_plot:
-        st.subheader("P-v Diagram")
-        fig, ax = plt.subplots(figsize=(6, 5))
-        v_c = np.linspace(v2, v1, 50)
-        ax.plot(v_c, P1*(v1/v_c)**k, '--', color='gray', label=t["ideal"])
-        ax.plot(v_c, P3_bar*(v3/v_c)**k, '--', color='gray')
-        ax.plot(v_c, P1*(v1/v_c)**1.35, '-', color='orange', label=t["real"])
-        ax.plot([v2, v2], [P1*(v1/v2)**1.35, P3_bar], '-', color='red')
-        ax.plot(v_c, P3_bar*(v3/v_c)**1.35, '-', color='cyan')
-        ax.plot([v1, v1], [P3_bar*(v3/v1)**1.35, P1], '-', color='blue')
-        ax.legend(); st.pyplot(fig)
+        tab_pv, tab_ts = st.tabs(["P-v", "T-s"])
+        with tab_pv:
+            st.subheader("P-v Diagram")
+            fig, ax = plt.subplots(figsize=(6, 5))
+            v_c = np.linspace(v2, v1, 50)
+            ax.plot(v_c, P1*(v1/v_c)**k, '--', color='gray', label=t["ideal"])
+            ax.plot(v_c, P3_bar*(v3/v_c)**k, '--', color='gray')
+            ax.plot(v_c, P1*(v1/v_c)**1.35, '-', color='orange', label=t["real"])
+            ax.plot([v2, v2], [P1*(v1/v2)**1.35, P3_bar], '-', color='red')
+            ax.plot(v_c, P3_bar*(v3/v_c)**1.35, '-', color='cyan')
+            ax.plot([v1, v1], [P3_bar*(v3/v1)**1.35, P1], '-', color='blue')
+            ax.set_xlabel("v (m³/kg)"); ax.set_ylabel("P (bar)")
+            ax.legend(); st.pyplot(fig)
+        
+        with tab_ts:
+            st.subheader("T-s Diagram")
+            fig, ax = plt.subplots(figsize=(6, 5))
+            def s_otto(T_K, v): return cv * np.log(T_K/273.15) + R_gas * np.log(v/v1)
+            ss1 = s_otto(T1_K, v1); ss2 = s_otto(T2_K, v2); ss3 = s_otto(T3_K, v3); ss4 = s_otto(T4_K, v1)
+            ax.plot([ss1, ss2, ss3, ss4, ss1], [T1, T2_K-273.15, T3, T4_K-273.15, T1], '-o', color='cyan')
+            ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("T (°C)")
+            st.pyplot(fig)
     
     with col_schema:
         st.subheader("Schema")
@@ -463,15 +523,27 @@ elif "Diesel" in ciclo:
         st.write(f"**{t['pmax']}:** {P3_bar:.2f} bar")
 
     with col_plot:
-        st.subheader("P-v Diagram")
-        fig, ax = plt.subplots(figsize=(6, 5))
-        v_c = np.linspace(v2, v1, 50); v_e = np.linspace(v3, v1, 50)
-        ax.plot(v_c, P1*(v1/v_c)**k, '--', color='gray', label=t["ideal"])
-        ax.plot(v_c, P1*(v1/v_c)**1.35, '-', color='orange', label=t["real"])
-        ax.plot([v2, v3], [P3_bar, P3_bar], '-', color='red')
-        ax.plot(v_e, P3_bar*(v3/v_e)**1.35, '-', color='cyan')
-        ax.plot([v1, v1], [P3_bar*(v3/v1)**1.35, P1], '-', color='blue')
-        ax.legend(); st.pyplot(fig)
+        tab_pv, tab_ts = st.tabs(["P-v", "T-s"])
+        with tab_pv:
+            st.subheader("P-v Diagram")
+            fig, ax = plt.subplots(figsize=(6, 5))
+            v_c = np.linspace(v2, v1, 50); v_e = np.linspace(v3, v1, 50)
+            ax.plot(v_c, P1*(v1/v_c)**k, '--', color='gray', label=t["ideal"])
+            ax.plot(v_c, P1*(v1/v_c)**1.35, '-', color='orange', label=t["real"])
+            ax.plot([v2, v3], [P3_bar, P3_bar], '-', color='red')
+            ax.plot(v_e, P3_bar*(v3/v_e)**1.35, '-', color='cyan')
+            ax.plot([v1, v1], [P3_bar*(v3/v1)**1.35, P1], '-', color='blue')
+            ax.set_xlabel("v (m³/kg)"); ax.set_ylabel("P (bar)")
+            ax.legend(); st.pyplot(fig)
+        
+        with tab_ts:
+            st.subheader("T-s Diagram")
+            fig, ax = plt.subplots(figsize=(6, 5))
+            def s_diesel(T_K, v): return cv * np.log(T_K/273.15) + R_gas * np.log(v/v1)
+            ss1 = s_diesel(T1_K, v1); ss2 = s_diesel(T2_K, v2); ss3 = s_diesel(T3_K, v3); ss4 = s_diesel(T4_K, v1)
+            ax.plot([ss1, ss2, ss3, ss4, ss1], [T1, T2_K-273.15, T3, T4_K-273.15, T1], '-o', color='gold')
+            ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("T (°C)")
+            st.pyplot(fig)
     
     with col_schema:
         st.subheader("Schema")
@@ -504,12 +576,152 @@ elif "Frigorifero" in ciclo:
         st.metric("COP Caldo (Heating)", f"{qc/wc:.2f}")
 
     with col_plot:
-        st.subheader("P-h Diagram")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.set_yscale('log')
-        Tt = np.linspace(-40, 60, 50)
-        ax.plot(np.concatenate([200 + 1.2*Tt, (400 + 0.5*Tt)[::-1]]), 
-                np.concatenate([10**((Tt+100)/70), 10**((Tt+100)/70)[::-1]]), color="gray", alpha=0.5)
-        ax.plot([h1, h2, h3, h4, h1], [Pe, Pc, Pc, Pe, Pe], color="cyan", lw=2, marker='o', label="Cycle")
-        ax.legend()
-        st.pyplot(fig)
+        st.subheader(t["plots"])
+        tab_ph, tab_ts = st.tabs(["P-h", "T-s"])
+        with tab_ph:
+            fig, ax = plt.subplots(figsize=(6, 4))
+            ax.set_yscale('log')
+            Tt = np.linspace(-40, 60, 50)
+            ax.plot(np.concatenate([200 + 1.2*Tt, (400 + 0.5*Tt)[::-1]]), 
+                    np.concatenate([10**((Tt+100)/70), 10**((Tt+100)/70)[::-1]]), color="gray", alpha=0.5)
+            ax.plot([h1, h2, h3, h4, h1], [Pe, Pc, Pc, Pe, Pe], color="cyan", lw=2, marker='o', label="Cycle")
+            ax.set_xlabel("h (kJ/kg)"); ax.set_ylabel("P (bar)")
+            ax.legend(); st.pyplot(fig)
+        
+        with tab_ts:
+            fig, ax = plt.subplots(figsize=(6, 4))
+            # Rough s calculation
+            s1 = 1.0 + 0.005 * Te; s2 = s1 + 0.002 * (Pc/Pe); s3 = s2 - 0.003 * (Pc-Pe); s4 = s3
+            ax.plot([s1, s2, s3, s4, s1], [Te, Tc, Tc, Te, Te], color="cyan", lw=2, marker='o')
+            ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("T (°C)")
+            st.pyplot(fig)
+
+
+# =====================================================================
+# THERMOCAD (CUSTOM CYCLE)
+# =====================================================================
+elif "ThermoCAD" in ciclo:
+    st.header("🛠️ ThermoCAD - Build your own Cycle (Water/Steam)")
+    st.info("Aggiungi punti indipendenti o trasformazioni per costruire il tuo impianto.")
+
+    with st.sidebar:
+        st.divider()
+        st.subheader("➕ Add New Point")
+        p_mode = st.selectbox("Method", ["P-T", "P-x", "P-s", "P-h", "T-x", "T-s"])
+        c1, c2 = st.columns(2)
+        v1 = c1.number_input("Val 1", value=1.0, format="%.4f")
+        v2 = c2.number_input("Val 2", value=20.0, format="%.4f")
+        
+        if st.button("Add Point"):
+            args = {}
+            if p_mode == "P-T": args = {"P": v1/10, "T": v2+273.15}
+            elif p_mode == "P-x": args = {"P": v1/10, "x": v2}
+            elif p_mode == "P-s": args = {"P": v1/10, "s": v2}
+            elif p_mode == "P-h": args = {"P": v1/10, "h": v2}
+            elif p_mode == "T-x": args = {"T": v1+273.15, "x": v2}
+            elif p_mode == "T-s": args = {"T": v1+273.15, "s": v2}
+            
+            st_pt = get_iapws_robust(**args)
+            if st_pt:
+                st.session_state["cad_points"].append({
+                    "name": f"P{len(st.session_state['cad_points'])+1}",
+                    "P": st_pt.P*10, "T": st_pt.T-273.15, 
+                    "h": st_pt.h, "s": st_pt.s, "x": st_pt.x, "v": st_pt.v
+                })
+                st.rerun()
+            else:
+                st.error("Invalid State")
+
+        st.subheader("🔄 Iso-Transformation")
+        if st.session_state["cad_points"]:
+            last_pt = st.session_state["cad_points"][-1]
+            st.write(f"From: **{last_pt['name']}**")
+            iso_type = st.selectbox("Iso-type", ["Isobara (P cost)", "Isoterma (T cost)", "Isentropica (s cost)", "Isentalpica (h cost)"])
+            target_prop = st.selectbox("Target Prop", ["Pressione (bar)", "Temperatura (°C)", "Entropia (kJ/kg·K)", "Entalpia (kJ/kg)", "Titolo (x)"])
+            target_val = st.number_input("Target Value", value=1.0, format="%.4f", key="iso_target")
+            
+            if st.button("Add Derived Point"):
+                args = {}
+                if "P" in iso_type: args["P"] = last_pt["P"]/10
+                elif "T" in iso_type: args["T"] = last_pt["T"]+273.15
+                elif "s" in iso_type: args["s"] = last_pt["s"]
+                elif "h" in iso_type: args["h"] = last_pt["h"]
+                
+                if "Pressione" in target_prop: args["P"] = target_val/10
+                elif "Temperatura" in target_prop: args["T"] = target_val+273.15
+                elif "Entropia" in target_prop: args["s"] = target_val
+                elif "Entalpia" in target_prop: args["h"] = target_val
+                elif "Titolo" in target_prop: args["x"] = target_val
+                
+                st_pt = get_iapws_robust(**args)
+                if st_pt:
+                    st.session_state["cad_points"].append({
+                        "name": f"P{len(st.session_state['cad_points'])+1}",
+                        "P": st_pt.P*10, "T": st_pt.T-273.15, 
+                        "h": st_pt.h, "s": st_pt.s, "x": st_pt.x, "v": st_pt.v
+                    })
+                    st.rerun()
+                else:
+                    st.error("Transformation failed.")
+        
+        if st.button("Remove Last Point"):
+            if st.session_state["cad_points"]:
+                st.session_state["cad_points"].pop()
+                st.rerun()
+
+        if st.button("Clear Cycle", type="primary"):
+            st.session_state["cad_points"] = []
+            st.rerun()
+
+    # Main Display
+    if st.session_state["cad_points"]:
+        col_list, col_diag = st.columns([1, 1.5])
+        
+        with col_list:
+            st.subheader("📋 Points List")
+            import pandas as pd
+            df = pd.DataFrame(st.session_state["cad_points"])
+            st.dataframe(df[["name", "P", "T", "h", "s", "x"]], use_container_width=True)
+            
+            st.subheader("⚙️ Cycle Stats")
+            # Simple stats for closed cycle if pts > 2
+            if len(st.session_state["cad_points"]) > 2:
+                pts = st.session_state["cad_points"]
+                q_in = 0; l_net = 0
+                for i in range(len(pts)-1):
+                    dh = pts[i+1]["h"] - pts[i]["h"]
+                    if dh > 0: q_in += dh
+                    l_net -= dh # sum of -dh is net work if closed correctly
+                # add final closing if desired, but here we just show segment sums
+                st.write(f"Total Heating (Qin): {q_in:.1f} kJ/kg")
+        
+        with col_diag:
+            st.subheader("📈 Diagrams")
+            t1, t2 = st.tabs(["T-s", "h-s"])
+            pts = st.session_state["cad_points"]
+            ss = [p["s"] for p in pts]; tt = [p["T"] for p in pts]; hh = [p["h"] for p in pts]
+            
+            with t1:
+                fig, ax = plt.subplots(figsize=(6, 5))
+                # Dome
+                sf, sg, t_sat = [], [], []
+                for tc in np.linspace(0.1, 373, 50):
+                    try:
+                        sf.append(IAPWS97(T=tc+273.15, x=0).s)
+                        sg.append(IAPWS97(T=tc+273.15, x=1).s)
+                        t_sat.append(tc)
+                    except: pass
+                ax.plot(sf, t_sat, color='#50c8e8', alpha=0.5); ax.plot(sg, t_sat, color='#50c8e8', alpha=0.5)
+                ax.plot(ss, tt, 'o-', color='cyan', lw=2)
+                for p in pts: ax.annotate(p["name"], (p["s"], p["T"]), color='white', fontsize=9)
+                ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("T (°C)")
+                st.pyplot(fig)
+            
+            with t2:
+                fig, ax = plt.subplots(figsize=(6, 5))
+                ax.plot(ss, hh, 'o-', color='red', lw=2)
+                for p in pts: ax.annotate(p["name"], (p["s"], p["h"]), color='white', fontsize=9)
+                ax.set_xlabel("s (kJ/kg·K)"); ax.set_ylabel("h (kJ/kg)")
+                st.pyplot(fig)
+    else:
+        st.write("Aggiungi dei punti dalla barra laterale per iniziare la costruzione del ciclo.")
