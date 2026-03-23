@@ -1,0 +1,189 @@
+import customtkinter as ctk
+import tkinter as tk
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_pdf import PdfPages
+import mplcursors
+from tkinter.filedialog import asksaveasfilename
+
+plt.style.use('dark_background')
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
+class DieselPoint:
+    def __init__(self, name, T_C, P_bar, v, s=0, h=0):
+        self.name = name
+        self.T_C = T_C
+        self.T_K = T_C + 273.15
+        self.P_bar = P_bar
+        self.v = v
+        self.s = s
+        self.h = h
+
+class DieselCAD(ctk.CTkFrame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        
+        self.grid_columnconfigure(0, weight=2)
+        self.grid_columnconfigure(1, weight=5)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.defaults = {
+            "P1": 1.0, "T1": 20.0, "r": 18.0, "rc": 2.0,
+            "k": 1.4, "cv": 0.718, "eta_is": 0.85
+        }
+        
+        self.points = []
+        self._build_left_panel()
+        self._build_plot_panel()
+        self._compute()
+
+    def _build_left_panel(self):
+        self.left_scroll = ctk.CTkScrollableFrame(self)
+        self.left_scroll.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.left_scroll.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(self.left_scroll, text="⚙ Ciclo Diesel", font=ctk.CTkFont(weight="bold", size=20)).pack(pady=10)
+        
+        self.entries = {}
+        for k, v in self.defaults.items():
+            f = ctk.CTkFrame(self.left_scroll, fg_color="transparent")
+            f.pack(fill="x", padx=10, pady=2)
+            lbl_map = {"P1": "P1 (bar)", "T1": "T1 (°C)", "r": "Rapp. Compressione (r)", "rc": "Rapp. Iniezione (rc)", "k": "Esponente k", "cv": "cv (kJ/kgK)", "eta_is": "η_is (compr/esp)"}
+            ctk.CTkLabel(f, text=lbl_map.get(k, k), width=150, anchor="w").pack(side="left")
+            ent = ctk.CTkEntry(f, width=100)
+            ent.insert(0, str(v))
+            ent.pack(side="right")
+            self.entries[k] = ent
+
+        ctk.CTkButton(self.left_scroll, text="Calcola", command=self._compute, fg_color="#2A6CBF").pack(pady=20, padx=10, fill="x")
+        self.results_box = ctk.CTkTextbox(self.left_scroll, height=400, font=("Consolas", 12))
+        self.results_box.pack(pady=10, padx=10, fill="x")
+
+    def _build_plot_panel(self):
+        self.frame_plot = ctk.CTkFrame(self, corner_radius=15, border_width=2)
+        self.frame_plot.grid(row=0, column=1, padx=(0,10), pady=10, sticky="nsew")
+        self.tabview = ctk.CTkTabview(self.frame_plot)
+        self.tabview.pack(fill="both", expand=True, padx=5, pady=5)
+        for t in ["P-v", "T-s"]: self.tabview.add(t)
+        
+        self.figs, self.axes, self.canvases = {}, {}, {}
+        for t in ["P-v", "T-s"]:
+            fig = Figure(figsize=(5,4), dpi=100, facecolor='#242424')
+            ax = fig.add_subplot(111, facecolor='#242424')
+            ax.tick_params(colors='white')
+            for sp in ax.spines.values(): sp.set_color('white')
+            ax.xaxis.label.set_color('white'); ax.yaxis.label.set_color('white')
+            canvas = FigureCanvasTkAgg(fig, master=self.tabview.tab(t))
+            canvas.get_tk_widget().pack(fill="both", expand=True)
+            self.figs[t], self.axes[t], self.canvases[t] = fig, ax, canvas
+
+    def _compute(self):
+        try:
+            P1 = float(self.entries["P1"].get())
+            T1_C = float(self.entries["T1"].get())
+            r = float(self.entries["r"].get())
+            rc = float(self.entries["rc"].get())
+            k = float(self.entries["k"].get())
+            cv = float(self.entries["cv"].get())
+            eta = float(self.entries["eta_is"].get())
+            R = cv * (k - 1)
+            cp = cv * k
+            T1_K = T1_C + 273.15
+            
+            v1 = (R * T1_K) / (P1 * 100)
+            v2 = v1 / r
+            
+            # 1->2 (isentropic compression)
+            T2s_K = T1_K * (r**(k-1))
+            T2_K = T1_K + (T2s_K - T1_K) / eta
+            P2_bar = P1 * (T2_K / T1_K) * (v1 / v2)
+            
+            # 2->3 (isobaric heat addition)
+            P3_bar = P2_bar
+            v3 = v2 * rc
+            T3_K = T2_K * rc
+            
+            # 3->4 (isentropic expansion)
+            T4s_K = T3_K * ((v3/v1)**(k-1))
+            T4_K = T3_K - eta * (T3_K - T4s_K)
+            P4_bar = P3_bar * (T4_K / T3_K) * (v3 / v1)
+            v4 = v1
+
+            def entropy(T_K, P_bar): return cp * np.log(T_K/273.15) - R * np.log(P_bar/1.0)
+            
+            p1 = DieselPoint("1", T1_C, P1, v1, entropy(T1_K, P1))
+            p2 = DieselPoint("2", T2_K-273.15, P2_bar, v2, entropy(T2_K, P2_bar))
+            p2s = DieselPoint("2s", T2s_K-273.15, P1*(r**k), v2, p1.s)
+            p3 = DieselPoint("3", T3_K-273.15, P3_bar, v3, entropy(T3_K, P3_bar))
+            p4 = DieselPoint("4", T4_K-273.15, P4_bar, v4, entropy(T4_K, P4_bar))
+            p4s = DieselPoint("4s", T4s_K-273.15, P3_bar*((v3/v1)**k), v4, p3.s)
+            
+            self.points = [p1, p2, p3, p4, p2s, p4s]
+            
+            qin = cp * (T3_K - T2_K)
+            qout = cv * (T4_K - T1_K)
+            wnet = qin - qout
+            thermal_eta = (wnet / qin) * 100
+            
+            res = f"--- RISULTATI DIESEL ---\nQin: {qin:.1f} kJ/kg\nQout: {qout:.1f} kJ/kg\nWnet: {wnet:.1f} kJ/kg\nη_termico: {thermal_eta:.2f}%\n\nPmax: {P3_bar:.2f} bar\nTmax: {T3_K-273.15:.1f} °C"
+            self.results_box.delete("1.0", "end"); self.results_box.insert("end", res)
+            self._draw()
+        except Exception as e: print(e)
+
+    def _draw(self):
+        p1, p2, p3, p4, p2s, p4s = self.points
+        for t in ["P-v", "T-s"]:
+            ax = self.axes[t]
+            ax.clear()
+            ax.set_title(f"Diagramma {t}")
+            
+            def get_xy(p): return (p.v, p.P_bar) if t=="P-v" else (p.s, p.T_C)
+            
+            # Paths
+            def plot_path(pA, pB, style, color, label=""):
+                if t == "P-v":
+                    vv = np.linspace(pA.v, pB.v, 50)
+                    if abs(pA.P_bar - pB.P_bar) < 1e-7: # isobaric
+                        pp = np.ones_like(vv) * pA.P_bar
+                        ax.plot(vv, pp, linestyle=style, color=color, label=label)
+                    elif abs(pA.v - pB.v) < 1e-7: # isochoric
+                        pp = np.linspace(pA.P_bar, pB.P_bar, 50)
+                        ax.plot(vv, pp, linestyle=style, color=color, label=label)
+                    else: # polytropic
+                        pp = pA.P_bar * (pA.v / vv)**1.4
+                        ax.plot(vv, pp, linestyle=style, color=color, label=label)
+                else:
+                    ss = np.linspace(pA.s, pB.s, 50)
+                    tt = np.linspace(pA.T_C, pB.T_C, 50)
+                    ax.plot(ss, tt, linestyle=style, color=color, label=label)
+
+            # Real cycle
+            plot_path(p1, p2, "-", "orange", "Reale")
+            plot_path(p2, p3, "-", "red")
+            plot_path(p3, p4, "-", "cyan")
+            plot_path(p4, p1, "-", "blue")
+            
+            # Ideal cycle
+            plot_path(p1, p2s, "--", "gray", "Ideale (η=1)")
+            plot_path(p2s, p3, "--", "gray")
+            plot_path(p3, p4s, "--", "gray")
+            plot_path(p4s, p1, "--", "gray")
+
+            for p in [p1, p2, p3, p4]:
+                x, y = get_xy(p)
+                ax.scatter(x, y, color="white", zorder=5)
+                ax.annotate(p.name, (x, y), xytext=(5,5), textcoords="offset points")
+            
+            ax.grid(True, alpha=0.3)
+            self.canvases[t].draw()
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.geometry("1400x850")
+    app.title("Test DieselCAD")
+    frame = DieselCAD(app)
+    frame.pack(fill="both", expand=True)
+    app.mainloop()

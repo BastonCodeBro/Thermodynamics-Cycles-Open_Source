@@ -1,0 +1,6 @@
+customtkinter
+matplotlib
+numpy
+scipy
+iapws
+mplcursors
