@@ -1,0 +1,9 @@
+{
+  "framework": "vite",
+  "buildCommand": "cd Cicli-Termodinamici-Web && npm run build",
+  "outputDirectory": "Cicli-Termodinamici-Web/dist",
+  "installCommand": "cd Cicli-Termodinamici-Web && npm install",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
