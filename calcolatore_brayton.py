@@ -356,52 +356,55 @@ class BraytonCAD(ctk.CTkFrame):
             self.label_error.configure(text=f"Errore: {ex}")
 
     def _update_results_box(self):
-            # Dati extra per Brayton
-            beta = r['P2'] / r['P1']
-            bwr_ideal = (r['l_tc'] / (r['l_tT'] * (r['m_gas']/r['m_dot']))) * 100 if r['l_tT'] > 0 else 0
-            bwr_real = (r['l_ic'] / (r['l_iT'] * (r['m_gas']/r['m_dot']))) * 100 if r['l_iT'] > 0 else 0
-            T_max_K = r['T3_C'] + 273.15
-            T_min_K = r['T1_C'] + 273.15
-            eta_carnot = (1 - T_min_K / T_max_K) * 100 if T_max_K > T_min_K else 0
+        # Dati extra per Brayton
+        r = self.results
+        if not r: return
+        
+        beta = r['P2'] / r['P1']
+        bwr_ideal = (r['l_tc'] / (r['l_tT'] * (r['m_gas']/r['m_dot']))) * 100 if r['l_tT'] > 0 else 0
+        bwr_real = (r['l_ic'] / (r['l_iT'] * (r['m_gas']/r['m_dot']))) * 100 if r['l_iT'] > 0 else 0
+        T_max_K = r['T3_C'] + 273.15
+        T_min_K = r['T1_C'] + 273.15
+        eta_carnot = (1 - T_min_K / T_max_K) * 100 if T_max_K > T_min_K else 0
 
-            lines = [
-                "═══════════════════════════════════════════",
-                "  RISULTATI CICLO BRAYTON – TURBOGAS",
-                "═══════════════════════════════════════════",
-                "",
-                f"  Rapporto di pressione β: {beta:.2f}",
-                "",
-                "── A. COMPRESSIONE ─────────────────────────",
-                f"  T₂  teorica (ideale)  : {r['T2_C']:>9.2f}  °C",
-                f"  T₂′ reale             : {r['T2r_C']:>9.2f}  °C",
-                f"  l_tc teorico          : {r['l_tc']:>9.2f}  kJ/kg",
-                f"  l_ic reale (interno)  : {r['l_ic']:>9.2f}  kJ/kg",
-                f"  P_tc pot. teorica     : {r['P_tc']/1000:>9.3f}  MW",
-                f"  P_ic pot. interna     : {r['P_ic']/1000:>9.3f}  MW",
-                f"  P_ac pot. asse comp.  : {r['P_ac']/1000:>9.3f}  MW",
-                "",
-                "── B. CAMERA DI COMBUSTIONE ─────────────────",
-                f"  G_c portata comb.     : {r['G_c']:>9.4f}  kg/s",
-                f"  Eccesso d'aria (e)    : {r['e']:>9.2f}  %",
-                "",
-                "── C. ESPANSIONE ────────────────────────────",
-                f"  T₄  teorica (ideale)  : {r['T4_C']:>9.2f}  °C",
-                f"  T₄′ reale             : {r['T4r_C']:>9.2f}  °C",
-                f"  l_tT teorico          : {r['l_tT']:>9.2f}  kJ/kg",
-                f"  l_iT reale (interno)  : {r['l_iT']:>9.2f}  kJ/kg",
-                f"  P_tT pot. teorica     : {r['P_tT']/1000:>9.3f}  MW",
-                f"  P_iT pot. interna     : {r['P_iT']/1000:>9.3f}  MW",
-                f"  P_e* pot. eff. lorda  : {r['P_e_lorda']/1000:>9.3f}  MW",
-                "",
-                "── D. PRESTAZIONI GLOBALI ────────────────────",
-                f"  P_e  pot. netta       : {r['P_e_netta']/1000:>9.3f}  MW",
-                f"  Q_in calore introdotto: {r['Q_in']/1000:>9.3f}  MW",
-                f"  BWR (Back Work Ratio) : {bwr_real:>9.2f}  %",
-                f"  η_te rend. eff.       : {r['eta_te']:>9.2f}  %",
-                f"  η_Carnot (limite)     : {eta_carnot:>9.2f}  %",
-                f"  C_c  cons. spec.      : {r['C_c_kgkWh']:>9.5f}  kg/kWh",
-                "═══════════════════════════════════════════",
-            ]
+        lines = [
+            "═══════════════════════════════════════════",
+            "  RISULTATI CICLO BRAYTON – TURBOGAS",
+            "═══════════════════════════════════════════",
+            "",
+            f"  Rapporto di pressione β: {beta:.2f}",
+            "",
+            "── A. COMPRESSIONE ─────────────────────────",
+            f"  T₂  teorica (ideale)  : {r['T2_C']:>9.2f}  °C",
+            f"  T₂′ reale             : {r['T2r_C']:>9.2f}  °C",
+            f"  l_tc teorico          : {r['l_tc']:>9.2f}  kJ/kg",
+            f"  l_ic reale (interno)  : {r['l_ic']:>9.2f}  kJ/kg",
+            f"  P_tc pot. teorica     : {r['P_tc']/1000:>9.3f}  MW",
+            f"  P_ic pot. interna     : {r['P_ic']/1000:>9.3f}  MW",
+            f"  P_ac pot. asse comp.  : {r['P_ac']/1000:>9.3f}  MW",
+            "",
+            "── B. CAMERA DI COMBUSTIONE ─────────────────",
+            f"  G_c portata comb.     : {r['G_c']:>9.4f}  kg/s",
+            f"  Eccesso d'aria (e)    : {r['e']:>9.2f}  %",
+            "",
+            "── C. ESPANSIONE ────────────────────────────",
+            f"  T₄  teorica (ideale)  : {r['T4_C']:>9.2f}  °C",
+            f"  T₄′ reale             : {r['T4r_C']:>9.2f}  °C",
+            f"  l_tT teorico          : {r['l_tT']:>9.2f}  kJ/kg",
+            f"  l_iT reale (interno)  : {r['l_iT']:>9.2f}  kJ/kg",
+            f"  P_tT pot. teorica     : {r['P_tT']/1000:>9.3f}  MW",
+            f"  P_iT pot. interna     : {r['P_iT']/1000:>9.3f}  MW",
+            f"  P_e* pot. eff. lorda  : {r['P_e_lorda']/1000:>9.3f}  MW",
+            "",
+            "── D. PRESTAZIONI GLOBALI ────────────────────",
+            f"  P_e  pot. netta       : {r['P_e_netta']/1000:>9.3f}  MW",
+            f"  Q_in calore introdotto: {r['Q_in']/1000:>9.3f}  MW",
+            f"  BWR (Back Work Ratio) : {bwr_real:>9.2f}  %",
+            f"  η_te rend. eff.       : {r['eta_te']:>9.2f}  %",
+            f"  η_Carnot (limite)     : {eta_carnot:>9.2f}  %",
+            f"  C_c  cons. spec.      : {r['C_c_kgkWh']:>9.5f}  kg/kWh",
+            "═══════════════════════════════════════════",
+        ]
         text = "\n".join(lines)
         self.results_box.configure(state="normal")
         self.results_box.delete("0.0", "end")
