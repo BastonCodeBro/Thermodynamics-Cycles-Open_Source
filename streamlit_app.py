@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 # New Modular Imports
 from core.thermo import get_iapws_robust, steam_point_to_dict, GasPoint, get_polytropic_path
-from components.ui import apply_custom_style, plotly_base, render_hero, render_metric_row
+from components.ui import apply_custom_style, plotly_base, render_hero, render_metric_row, add_line, add_generic_points, add_steam_dome, add_steam_points
 
 
 def create_pdf_report(cycle_name, report_text, points_df, fig_ts):
@@ -117,6 +117,14 @@ dict_t = {
         "build_info": "Free-form construction of complex cycles with multi-phase support.",
         "points": "State Point Table",
         "stats": "Energy Balance",
+        "net_power": "Net Power",
+        "flow": "Mass Flow",
+        "components": "Defined Components",
+        "add_point": "Add State Point",
+        "def_comp": "Define Component",
+        "global_params": "Global Parameters",
+        "reset": "Reset Cycle",
+        "schema": "Plant Schematic",
     },
     "it": {
         "main_title": "CAD Termodinamico Web",
@@ -144,6 +152,14 @@ dict_t = {
         "build_info": "Costruzione libera di cicli complessi con supporto multi-fase.",
         "points": "Tabella Punti di Stato",
         "stats": "Bilancio Energetico",
+        "net_power": "Potenza Netta",
+        "flow": "Portata Massica",
+        "components": "Componenti Definiti",
+        "add_point": "Aggiungi Punto di Stato",
+        "def_comp": "Definisci Componente",
+        "global_params": "Parametri Globali",
+        "reset": "Resetta Ciclo",
+        "schema": "Schema Impianto",
     },
 }
 
@@ -305,10 +321,10 @@ if "Acqua" in ciclo:
             st.info("Add at least 2 points to define components.")
 
         st.divider()
-        st.subheader("3. 📋 Global Parameters")
-        st.session_state["water_portata"] = st.number_input("Global Mass Flow (kg/s)", value=st.session_state["water_portata"])
+        st.subheader(t["global_params"])
+        st.session_state["water_portata"] = st.number_input(t["flow"] + " (kg/s)", value=st.session_state["water_portata"])
         
-        if st.button("Reset Cycle", type="primary", use_container_width=True):
+        if st.button(t["reset"], type="primary", use_container_width=True):
             st.session_state["water_pts"] = []
             st.session_state["water_components"] = []
             st.rerun()
@@ -341,16 +357,16 @@ if "Acqua" in ciclo:
 
     with col_main:
         render_metric_row({
-            "Lavoro Netto": f"{l_net:.2f} kJ/kg",
-            "Rendimento": f"{eta_cycle:.2f} %",
-            "Potenza Netta": f"{p_net/1000:.2f} MW"
+            t["net_work"]: f"{l_net:.2f} kJ/kg",
+            t["efficiency"]: f"{eta_cycle:.2f} %",
+            t["net_power"]: f"{p_net/1000:.2f} MW"
         })
         
-        tab_list, tab_ts, tab_pv, tab_hs, tab_rep = st.tabs(["State Points", "T-s Diagram", "P-v Diagram", "h-s Diagram", "Analysis Report"])
+        tab_list, tab_ts, tab_pv, tab_hs, tab_rep = st.tabs([t["points"], "T-s Diagram", "P-v Diagram", "h-s Diagram", t["results"]])
         
         with tab_list:
             render_point_table(w_pts)
-            st.subheader("Defined Components")
+            st.subheader(t["components"])
             for i, c in enumerate(w_comp):
                 c_col1, c_col2 = st.columns([4, 1])
                 c_col1.write(f"**{c['type']}**: {c['in']} ➜ {c['out']} (y={c['y']})")
@@ -594,12 +610,12 @@ elif "Otto" in ciclo:
 
     with col_main:
         render_metric_row({
-            "Lavoro Netto": f"{w_net:.1f} kJ/kg",
-            "Rendimento": f"{eta_cycle:.2f} %",
-            "Pressione Max": f"{p3:.2f} bar"
+            t["net_work"]: f"{w_net:.1f} kJ/kg",
+            t["efficiency"]: f"{eta_cycle:.2f} %",
+            t["pmax"]: f"{p3:.2f} bar"
         })
         
-        tab_flow, tab_pv, tab_ts, tab_rep = st.tabs(["Schema Motore", "P-v Diagram", "T-s Diagram", "Analysis Report"])
+        tab_flow, tab_pv, tab_ts, tab_rep = st.tabs([t["schema"], "P-v Diagram", "T-s Diagram", t["results"]])
         with tab_flow: st.pyplot(draw_otto_diesel_schema(False))
         with tab_pv:
             fig = plotly_base("Diagramma P-v (Otto)", "v (m³/kg)", "P (bar)", THEME)
@@ -664,12 +680,12 @@ elif "Diesel" in ciclo:
 
     with col_main:
         render_metric_row({
-            "Lavoro Netto": f"{w_net:.1f} kJ/kg",
-            "Rendimento": f"{eta_cycle:.2f} %",
-            "Pressione Max": f"{p3:.2f} bar"
+            t["net_work"]: f"{w_net:.1f} kJ/kg",
+            t["efficiency"]: f"{eta_cycle:.2f} %",
+            t["pmax"]: f"{p3:.2f} bar"
         })
         
-        tab_flow, tab_pv, tab_ts, tab_rep = st.tabs(["Schema Motore", "P-v Diagram", "T-s Diagram", "Analysis Report"])
+        tab_flow, tab_pv, tab_ts, tab_rep = st.tabs([t["schema"], "P-v Diagram", "T-s Diagram", t["results"]])
         with tab_flow: st.pyplot(draw_otto_diesel_schema(True))
         with tab_pv:
             fig = plotly_base("Diagramma P-v (Diesel)", "v (m³/kg)", "P (bar)", THEME)
@@ -720,11 +736,11 @@ elif "Frigorifero" in ciclo:
 
     with col_main:
         render_metric_row({
-            "COP Freddo": f"{cop:.2f}",
-            "Pot. Frigo": f"{qe*m_dot:.1f} kW",
-            "Pot. Compr.": f"{wc*m_dot:.1f} kW"
+            "COP": f"{cop:.2f}",
+            t["heat_in"]: f"{qe*m_dot:.1f} kW",
+            "WC": f"{wc*m_dot:.1f} kW"
         })
-        tab_ph, tab_ts, tab_rep = st.tabs(["P-h Diagram", "T-s Diagram", "Analysis Report"])
+        tab_ph, tab_ts, tab_rep = st.tabs(["P-h Diagram", "T-s Diagram", t["results"]])
         with tab_ph:
             fig = plotly_base("Diagramma P-h (R134a approx)", "h (kJ/kg)", "P (bar)", THEME, ylog=True)
             add_generic_points(fig, pts, "h", "P", "Ciclo Frigo", THEME["cyan"])
@@ -741,16 +757,16 @@ elif "Frigorifero" in ciclo:
 
 
 else:
-    st.header("🛠️ ThermoCAD")
+    st.header("🎨 Laboratorio Aria (CAD)")
     st.info(t["build_info"])
 
     with st.sidebar:
         st.divider()
-        st.subheader("1. Punto indipendente")
-        point_mode = st.selectbox("Metodo", ["P-T", "P-x", "P-s", "P-h", "T-x", "T-s"])
-        val1 = st.number_input("Valore 1", value=1.0, format="%.4f", key="cad_v1")
-        val2 = st.number_input("Valore 2", value=20.0, format="%.4f", key="cad_v2")
-        if st.button("Aggiungi punto", use_container_width=True):
+        st.subheader(t["add_point"])
+        point_mode = st.selectbox("Metodo / Method", ["P-T", "P-x", "P-s", "P-h", "T-x", "T-s"])
+        val1 = st.number_input("Valore / Value 1", value=1.0, format="%.4f", key="cad_v1")
+        val2 = st.number_input("Valore / Value 2", value=20.0, format="%.4f", key="cad_v2")
+        if st.button("Aggiungi punto / Add point", use_container_width=True):
             args = {}
             if point_mode == "P-T":
                 args = {"P": val1 / 10.0, "T": val2 + 273.15}
@@ -769,16 +785,16 @@ else:
                 st.session_state["cad_points"].append(steam_point(f"P{len(st.session_state['cad_points']) + 1}", state))
                 st.rerun()
             else:
-                st.error("Stato non valido")
+                st.error("Stato non valido / Invalid state")
 
-        st.subheader("2. Punto derivato")
+        st.subheader(t["def_comp"])
         if st.session_state["cad_points"]:
             point_names = [p["name"] for p in st.session_state["cad_points"]]
-            base_name = st.selectbox("Punto di partenza", point_names)
-            iso_type = st.selectbox("Trasformazione iso", ["Isobara", "Isoterma", "Isentropica", "Isentalpica"])
-            target_prop = st.selectbox("Proprietà target", ["Pressione (bar)", "Temperatura (°C)", "Entropia (kJ/kgK)", "Entalpia (kJ/kg)", "Titolo x"])
-            target_val = st.number_input("Valore target", value=1.0, format="%.4f", key="cad_target")
-            if st.button("Aggiungi punto derivato", use_container_width=True):
+            base_name = st.selectbox("Punto di partenza / Inlet", point_names)
+            iso_type = st.selectbox("Trasformazione / Transformation", ["Isobara", "Isoterma", "Isentropica", "Isentalpica"])
+            target_prop = st.selectbox("Proprietà target / Target Property", ["Pressione (bar)", "Temperatura (°C)", "Entropia (kJ/kgK)", "Entalpia (kJ/kg)", "Titolo x"])
+            target_val = st.number_input("Valore target / Target Value", value=1.0, format="%.4f", key="cad_target")
+            if st.button("Aggiungi punto derivato / Add derived point", use_container_width=True):
                 base_point = next(p for p in st.session_state["cad_points"] if p["name"] == base_name)
                 args = {}
                 if iso_type == "Isobara":
@@ -806,14 +822,14 @@ else:
                     st.session_state["cad_points"].append(steam_point(f"P{len(st.session_state['cad_points']) + 1}", state))
                     st.rerun()
                 else:
-                    st.error("Trasformazione non valida")
+                    st.error("Trasformazione non valida / Invalid transformation")
 
-        st.checkbox("Chiudi il ciclo nei diagrammi", key="cad_close_cycle")
-        if st.button("Rimuovi ultimo punto", use_container_width=True):
+        st.checkbox("Chiudi il ciclo / Close cycle", key="cad_close_cycle")
+        if st.button("Rimuovi ultimo punto / Remove last point", use_container_width=True):
             if st.session_state["cad_points"]:
                 st.session_state["cad_points"].pop()
                 st.rerun()
-        if st.button("Azzera ciclo", type="primary", use_container_width=True):
+        if st.button(t["reset"], type="primary", use_container_width=True):
             st.session_state["cad_points"] = []
             st.rerun()
 
@@ -867,4 +883,4 @@ else:
                 add_steam_points(fig, closed_points, "s", "h", "Cycle", THEME["red"])
                 st.plotly_chart(fig, use_container_width=True)
     else:
-        st.write("Aggiungi punti dalla barra laterale per iniziare a costruire il ciclo.")
+        st.write("Add points from the sidebar to start building your cycle. / Aggiungi punti dalla barra laterale per iniziare.")

@@ -16,23 +16,23 @@ def apply_custom_style():
             font-family: 'Inter', sans-serif;
         }
 
-        /* Hero Section */
+        /* Hero Section (Small Version) */
         .hero {
-            margin-bottom: 2rem; padding: 2rem 2.5rem;
-            border-radius: 20px; 
+            margin-bottom: 1.5rem; padding: 1.2rem 2rem;
+            border-radius: 16px; 
             background: linear-gradient(135deg, #f0f7ff, #e6eff7);
-            border: 1px solid rgba(13, 59, 102, 0.2);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(13, 59, 102, 0.15);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.04);
         }
         .hero h1 { 
             margin: 0; 
             background: linear-gradient(90deg, #0d3b66, #00509d);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 3rem; font-weight: 700; line-height: 1.1; 
+            font-size: 2.2rem; font-weight: 700; line-height: 1.1; 
         }
-        .hero p { margin: 1rem 0 0 0; color: #0d3b66; font-size: 1.2rem; }
-        .authorline { font-size: 0.9rem; opacity: 0.8; margin-top: 0.8rem; color: #0077b6; }
+        .hero p { margin: 0.5rem 0 0 0; color: #0d3b66; font-size: 1rem; }
+        .authorline { font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem; color: #0077b6; }
 
         /* CAD Report Style */
         .cad-report {
