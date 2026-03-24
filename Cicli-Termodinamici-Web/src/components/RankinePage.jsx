@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
+import { generateProcessPath } from '../utils/processPath';
 import { Flame } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -11,6 +12,7 @@ import { plotLayout, plotConfig, addTrace, addDomeTrace } from './shared/plotCon
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#38BDF8';
+const SEGMENT_COLORS = ['#38BDF8', '#EF4444', '#22D3EE', '#60A5FA'];
 const isFiniteNumber = (value) => Number.isFinite(value);
 
 const pointAnnotations = (pts, labels, color) =>
@@ -45,15 +47,26 @@ const RankinePage = () => {
     const node = nodeRef.current;
     if (!results || !node) return;
 
-    const renderActivePlot = async () => {
+    const paths = results.segmentPaths;
+    const renderActivePlot = () => {
+      if (!paths || paths.length !== 4) return;
       if (activeTab === 0) {
         const data = [
           addDomeTrace(results.dome.s, results.dome.t),
-          addTrace(
-            [...results.allPoints.map(p => p.s), results.allPoints[0].s],
-            [...results.allPoints.map(p => p.t), results.allPoints[0].t],
-            { name: 'Ciclo Rankine', color: COLOR, mode: 'lines+markers', markerSize: 10 }
+          ...paths.map((path, k) =>
+            addTrace(path.map(p => p.s), path.map(p => p.t), {
+              name: `Tratto ${k + 1}`,
+              color: SEGMENT_COLORS[k],
+              width: 3,
+              mode: 'lines',
+            })
           ),
+          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.t), {
+            name: 'Stati',
+            color: COLOR,
+            mode: 'markers',
+            markerSize: 10,
+          }),
         ];
         const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(
@@ -65,11 +78,20 @@ const RankinePage = () => {
       } else if (activeTab === 1) {
         const data = [
           results.domeHs ? addDomeTrace(results.domeHs.s, results.domeHs.h) : null,
-          addTrace(
-            [...results.allPoints.map(p => p.s), results.allPoints[0].s],
-            [...results.allPoints.map(p => p.h), results.allPoints[0].h],
-            { name: 'Ciclo h-s', color: '#38BDF8', mode: 'lines+markers', markerSize: 10 }
+          ...paths.map((path, k) =>
+            addTrace(path.map(p => p.s), path.map(p => p.h), {
+              name: `Tratto ${k + 1}`,
+              color: SEGMENT_COLORS[k],
+              width: 3,
+              mode: 'lines',
+            })
           ),
+          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.h), {
+            name: 'Stati',
+            color: COLOR,
+            mode: 'markers',
+            markerSize: 10,
+          }),
         ].filter(Boolean);
         const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(
@@ -80,11 +102,20 @@ const RankinePage = () => {
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 2) {
         const data = [
-          addTrace(
-            [...results.allPoints.map(p => p.v), results.allPoints[0].v],
-            [...results.allPoints.map(p => p.p), results.allPoints[0].p],
-            { name: 'Ciclo P-v', color: '#60A5FA', mode: 'lines+markers', markerSize: 10 }
+          ...paths.map((path, k) =>
+            addTrace(path.map(p => p.v), path.map(p => p.p), {
+              name: `Tratto ${k + 1}`,
+              color: SEGMENT_COLORS[k],
+              width: 3,
+              mode: 'lines',
+            })
           ),
+          addTrace(results.allPoints.map(p => p.v), results.allPoints.map(p => p.p), {
+            name: 'Stati',
+            color: '#60A5FA',
+            mode: 'markers',
+            markerSize: 10,
+          }),
         ];
         const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
         layout.yaxis.type = 'log';
@@ -130,12 +161,20 @@ const RankinePage = () => {
       const wp = st2.h - st1.h;
       const q_in = st3.h - st2.h;
       const w_net = wt - wp;
+      const q_out = q_in - w_net;
 
       const domeFull = await getSaturationDomeFull();
+      const segmentPaths = await Promise.all([
+        generateProcessPath(st1, st2, 'Water'),
+        generateProcessPath(st2, st3, 'Water'),
+        generateProcessPath(st3, st4, 'Water'),
+        generateProcessPath(st4, st1, 'Water'),
+      ]);
 
       setResults({
         allPoints: [st1, st2, st3, st4],
-        stats: { wt, wp, q_in, q_out: w_net - q_in + wp, eta: (w_net / q_in) * 100, power: w_net * inputs.mass_flow },
+        segmentPaths,
+        stats: { wt, wp, q_in, q_out, eta: (w_net / q_in) * 100, power: w_net * inputs.mass_flow },
         dome: domeFull.ts,
         domeHs: domeFull.hs,
       });

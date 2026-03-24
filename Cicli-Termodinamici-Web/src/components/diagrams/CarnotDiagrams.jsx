@@ -32,7 +32,7 @@ export const useCarnotTsDiagram = (results, plotRef) => {
     const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
     layout.annotations = pointAnnotations(
       pts.map(p => ({ x: p.s, y: p.t })),
-      ['1\nIsoT esp.', '2\nAdiab.', '3\nIsoT compr.', '4\nAdiab.']
+      ['1\nStato 1\nT = TH', '2\nStato 2', '3\nStato 3\nT = TL', '4\nStato 4']
     );
     renderPlot(node, data, layout, plotConfig);
     return () => cleanupPlot(node);

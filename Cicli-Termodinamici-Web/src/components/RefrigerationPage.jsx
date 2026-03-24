@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
+import { generateProcessPath } from '../utils/processPath';
 import { Snowflake } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -11,6 +12,7 @@ import { plotLayout, plotConfig, addTrace, addDomeTrace } from './shared/plotCon
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#10B981';
+const SEGMENT_COLORS = ['#10B981', '#EF4444', '#60A5FA', '#A78BFA'];
 const isFiniteNumber = (value) => Number.isFinite(value);
 
 const REFRIGERANTS = [
@@ -50,13 +52,20 @@ const RefrigerationPage = () => {
     const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? phRef.current : null;
     if (!results || !node) return;
     const pts = results.allPoints;
+    const paths = results.segmentPaths;
+    if (!paths || paths.length !== 4) return;
     if (activeTab === 0) {
       const data = [
         addDomeTrace(results.dome.s, results.dome.t),
-        addTrace(
-          [...pts.map(p => p.s), pts[0].s], [...pts.map(p => p.t), pts[0].t],
-          { name: 'Ciclo Frigorifero', color: COLOR, mode: 'lines+markers', markerSize: 8 }
+        ...paths.map((path, k) =>
+          addTrace(path.map(p => p.s), path.map(p => p.t), {
+            name: `Tratto ${k + 1}`,
+            color: SEGMENT_COLORS[k],
+            width: 3,
+            mode: 'lines',
+          })
         ),
+        addTrace(pts.map(p => p.s), pts.map(p => p.t), { name: 'Stati', color: COLOR, mode: 'markers', markerSize: 8 }),
       ];
       const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
       layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
@@ -65,10 +74,15 @@ const RefrigerationPage = () => {
     } else if (activeTab === 1) {
       const data = [
         results.domePh ? addDomeTrace(results.domePh.h, results.domePh.p) : null,
-        addTrace(
-          [...pts.map(p => p.h), pts[0].h], [...pts.map(p => p.p), pts[0].p],
-          { name: 'Ciclo P-h', color: '#34D399', mode: 'lines+markers', markerSize: 8 }
+        ...paths.map((path, k) =>
+          addTrace(path.map(p => p.h), path.map(p => p.p), {
+            name: `Tratto ${k + 1}`,
+            color: SEGMENT_COLORS[k],
+            width: 3,
+            mode: 'lines',
+          })
         ),
+        addTrace(pts.map(p => p.h), pts.map(p => p.p), { name: 'Stati', color: '#34D399', mode: 'markers', markerSize: 8 }),
       ].filter(Boolean);
       const layout = plotLayout('Entalpia h (kJ/kg)', 'Pressione P (bar)');
       layout.yaxis.type = 'log';
@@ -103,9 +117,16 @@ const RefrigerationPage = () => {
       const qlow = st1.h - st4.h;
 
       const domeFull = await getSaturationDomeFull(fluid);
+      const segmentPaths = await Promise.all([
+        generateProcessPath(st1, st2r, fluid),
+        generateProcessPath(st2r, st3, fluid),
+        generateProcessPath(st3, st4, fluid),
+        generateProcessPath(st4, st1, fluid),
+      ]);
 
       setResults({
         allPoints: [st1, st2r, st3, st4],
+        segmentPaths,
         stats: { win, qlow, qhigh: st2r.h - st3.h, cop: qlow / win, cop_hp: (st2r.h - st3.h) / win, cooling_cap: qlow * inputs.mass_flow },
         dome: domeFull.ts,
         domePh: domeFull.ph,

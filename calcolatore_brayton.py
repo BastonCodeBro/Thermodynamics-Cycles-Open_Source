@@ -490,6 +490,36 @@ class BraytonCAD(ctk.CTkFrame):
             
         return pts
 
+    def _path_for_process(self, pt1: BraytonPoint, pt2: BraytonPoint, process: str, n=80):
+        """
+        Punti intermedia per tratti isoentropici o isobari (coerente con il modello gas ideale del web).
+        """
+        if process not in ("isentropic", "isobaric"):
+            return self._path_between(pt1, pt2, n)
+
+        pts = []
+        cp = pt1.cp
+        R = pt1.R
+        k = pt1.k
+        for t in np.linspace(0, 1, n):
+            if process == "isentropic":
+                T_C = pt1.T_C + (pt2.T_C - pt1.T_C) * t
+                T_K = T_C + 273.15
+                ratio = max(T_K / pt1.T_K, 1e-9) if abs(pt1.T_K) > 1e-9 else 1.0
+                P_bar = pt1.P_bar * ratio ** (k / (k - 1))
+            else:
+                T_C = pt1.T_C + (pt2.T_C - pt1.T_C) * t
+                T_K = T_C + 273.15
+                P_bar = pt1.P_bar
+            v_k = (R * T_K) / (P_bar * 100.0)
+            h_k = pt1.h + cp * (T_C - pt1.T_C)
+            s_k = pt1.s + cp * np.log(T_K / pt1.T_K) - R * np.log(P_bar / pt1.P_bar)
+            pts.append(dict(T_C=T_C, T_K=T_K, P_bar=P_bar, h=h_k, s=s_k, v=v_k))
+
+        pts[0] = dict(T_C=pt1.T_C, T_K=pt1.T_K, P_bar=pt1.P_bar, h=pt1.h, s=pt1.s, v=pt1.v)
+        pts[-1] = dict(T_C=pt2.T_C, T_K=pt2.T_K, P_bar=pt2.P_bar, h=pt2.h, s=pt2.s, v=pt2.v)
+        return pts
+
     def _pt_xy(self, d: dict, tab: str):
         if tab == "T-s":  return d["s"],   d["T_C"]
         if tab == "T-P":  return d["P_bar"], d["T_C"]
@@ -505,7 +535,8 @@ class BraytonCAD(ctk.CTkFrame):
         Restituisce due liste di segmenti:
           ideal_segs  – ciclo ideale  (tratti trattegiati)
           real_segs   – ciclo reale   (tratti pieni)
-        Ogni elemento: (pt_start, pt_end, colore, stile, label)
+        Ogni elemento: (pt_start, pt_end, colore, stile, label, processo)
+        processo: "isentropic" | "isobaric"
 
         La chiusura del ciclo (scarico) è inclusa esplicitamente in entrambi,
         collegando l'ultimo punto al punto 1.
@@ -516,18 +547,18 @@ class BraytonCAD(ctk.CTkFrame):
 
         # ── Ciclo ideale: 1→2→3→4→1 ──────────────────────────────────
         ideal_segs = [
-            (p1,  p2,  "#6699FF", "--", "Compressione ideale"),
-            (p2,  p3,  "#FFCC44", "--", "Combustione ideale"),
-            (p3,  p4,  "#44DDAA", "--", "Espansione ideale"),
-            (p4,  p1,  "#CC88FF", "--", "Scarico ideale (chiusura)"),
+            (p1,  p2,  "#6699FF", "--", "Compressione ideale", "isentropic"),
+            (p2,  p3,  "#FFCC44", "--", "Combustione ideale", "isobaric"),
+            (p3,  p4,  "#44DDAA", "--", "Espansione ideale", "isentropic"),
+            (p4,  p1,  "#CC88FF", "--", "Scarico ideale (chiusura)", "isobaric"),
         ]
 
         # ── Ciclo reale: 1→2'→3→4'→1 ────────────────────────────────
         real_segs = [
-            (p1,   p2r, "#3377EE", "-",  "Compressione reale"),
-            (p2r,  p3,  "#FF8800", "-",  "Combustione"),
-            (p3,   p4r, "#00CC88", "-",  "Espansione reale"),
-            (p4r,  p1,  "#AA44FF", "-",  "Scarico reale (chiusura)"),
+            (p1,   p2r, "#3377EE", "-",  "Compressione reale", "isentropic"),
+            (p2r,  p3,  "#FF8800", "-",  "Combustione", "isobaric"),
+            (p3,   p4r, "#00CC88", "-",  "Espansione reale", "isentropic"),
+            (p4r,  p1,  "#AA44FF", "-",  "Scarico reale (chiusura)", "isobaric"),
         ]
         return ideal_segs, real_segs
 
@@ -666,16 +697,16 @@ class BraytonCAD(ctk.CTkFrame):
             ideal_segs, real_segs = self._get_cycles()
 
             # ── 1. Disegna ciclo ideale (tratteggiato, semitrasparente) ─
-            for (pt1, pt2, color, style, label) in ideal_segs:
-                path = self._path_between(pt1, pt2)
+            for (pt1, pt2, color, style, label, proc) in ideal_segs:
+                path = self._path_for_process(pt1, pt2, proc)
                 xs = [self._pt_xy(d, tab)[0] for d in path]
                 ys = [self._pt_xy(d, tab)[1] for d in path]
                 ax.plot(xs, ys, color=color, linestyle=style,
                         linewidth=1.8, alpha=0.55, label=label)
 
             # ── 2. Disegna ciclo reale (pieno, più visibile) ────────────
-            for (pt1, pt2, color, style, label) in real_segs:
-                path = self._path_between(pt1, pt2)
+            for (pt1, pt2, color, style, label, proc) in real_segs:
+                path = self._path_for_process(pt1, pt2, proc)
                 xs = [self._pt_xy(d, tab)[0] for d in path]
                 ys = [self._pt_xy(d, tab)[1] for d in path]
                 ax.plot(xs, ys, color=color, linestyle=style,

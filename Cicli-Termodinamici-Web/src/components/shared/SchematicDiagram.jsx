@@ -151,15 +151,15 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
             {ICONS.pump(120, 230, accentColor)}
             {ICONS.boiler(120, 80, accentColor)}
 
-            <Arrow x1={148} y1={80} x2={310} y2={80} color="#94A3B8" label="q_{in}" labelOffset={{ x: 0, y: -14 }} />
-            <Arrow x1={340} y1={108} x2={340} y2={202} color="#94A3B8" label="w_t" labelOffset={{ x: 20, y: 0 }} />
-            <Arrow x1={312} y1={230} x2={148} y2={230} color="#94A3B8" label="q_{out}" labelOffset={{ x: 0, y: 16 }} />
-            <Arrow x1={120} y1={202} x2={120} y2={108} color="#94A3B8" label="w_p" labelOffset={{ x: -20, y: 0 }} />
+            <Arrow x1={148} y1={80} x2={310} y2={80} color="#94A3B8" label="Qin" labelOffset={{ x: 0, y: -14 }} />
+            <Arrow x1={340} y1={108} x2={340} y2={202} color="#94A3B8" label="Wt" labelOffset={{ x: 20, y: 0 }} />
+            <Arrow x1={312} y1={230} x2={148} y2={230} color="#94A3B8" label="Qout" labelOffset={{ x: 0, y: 16 }} />
+            <Arrow x1={120} y1={202} x2={120} y2={108} color="#94A3B8" label="Wp" labelOffset={{ x: -20, y: 0 }} />
 
-            <PointLabel x={120} y={144} number={1} processLabel="usc. condens." color={accentColor} />
-            <PointLabel x={120} y={158} number={2} processLabel="usc. pompa" color={accentColor} />
-            <PointLabel x={340} y={144} number={3} processLabel="usc. caldaia" color={accentColor} />
-            <PointLabel x={340} y={158} number={4} processLabel="usc. turbina" color={accentColor} />
+            <PointLabel x={120} y={95} number={2} processLabel="usc. pompa" color={accentColor} />
+            <PointLabel x={120} y={215} number={1} processLabel="usc. condens." color={accentColor} />
+            <PointLabel x={340} y={95} number={3} processLabel="usc. caldaia" color={accentColor} />
+            <PointLabel x={340} y={215} number={4} processLabel="usc. turbina" color={accentColor} />
           </svg>
         );
 
@@ -171,13 +171,10 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
             {ICONS.turbine(360, 80, accentColor)}
             {ICONS.exhaust(360, 210, '#64748B')}
 
-            <Arrow x1={128} y1={80} x2={196} y2={80} color="#94A3B8" label="2" />
-            <Arrow x1={264} y1={80} x2={330} y2={80} color="#94A3B8" label="3" />
-            <Arrow x1={360} y1={108} x2={360} y2={180} color="#94A3B8" label="4" />
-            <Arrow x1={332} y1={210} x2={128} y2={210} color="#94A3B8" labelOffset={{ x: 0, y: 0 }}>
-              <line x1={332} y1={210} x2={128} y2={210} stroke="#94A3B8" strokeWidth={2} />
-              <polygon points="128,210 138,205 138,215" fill="#94A3B8" />
-            </Arrow>
+            <Arrow x1={128} y1={80} x2={196} y2={80} color="#94A3B8" label="1→2" />
+            <Arrow x1={264} y1={80} x2={330} y2={80} color="#94A3B8" label="2→3" />
+            <Arrow x1={360} y1={108} x2={360} y2={180} color="#94A3B8" label="3→4" />
+            <Arrow x1={332} y1={210} x2={128} y2={210} color="#94A3B8" label="4→1" />
             <Arrow x1={100} y1={180} x2={100} y2={108} color="#94A3B8" label="1" />
 
             <PointLabel x={70} y={150} number={1} processLabel="aspiraz." color={accentColor} />
@@ -187,7 +184,6 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
 
             <line x1={100} y1={210} x2={100} y2={108} stroke="#94A3B8" strokeWidth={2} />
             <line x1={100} y1={210} x2={360} y2={210} stroke="#94A3B8" strokeWidth={2} />
-            <polygon points="128,210 138,205 138,215" fill="#94A3B8" />
           </svg>
         );
 
@@ -254,15 +250,25 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
       case 'refrigeration':
         return (
           <svg viewBox="0 0 460 320" width="100%" height="100%">
+            <defs>
+              <marker id="schematicRefrigerationHeatOut" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <polygon points="0 0, 6 3, 0 6" fill="#F87171" />
+              </marker>
+            </defs>
             {ICONS.compressor(120, 70, accentColor)}
             {ICONS.condenser(340, 70, '#F87171')}
             {ICONS.valve(340, 230, accentColor)}
             {ICONS.evaporator(120, 230, '#38BDF8')}
 
-            <Arrow x1={148} y1={70} x2={306} y2={70} color="#94A3B8" label="q_H" labelOffset={{ x: 0, y: -14 }} />
-            <Arrow x1={340} y1={98} x2={340} y2={198} color="#94A3B8" label="h_3=h_4" labelOffset={{ x: 22, y: 0 }} />
-            <Arrow x1={312} y1={230} x2={148} y2={230} color="#94A3B8" label="q_L" labelOffset={{ x: 0, y: 16 }} />
-            <Arrow x1={120} y1={202} x2={120} y2={98} color="#94A3B8" label="w_in" labelOffset={{ x: -22, y: 0 }} />
+            <Arrow x1={148} y1={70} x2={306} y2={70} color="#94A3B8" label="2→3" labelOffset={{ x: 0, y: -14 }} />
+            <Arrow x1={340} y1={98} x2={340} y2={198} color="#94A3B8" label="h3 = h4" labelOffset={{ x: 28, y: 0 }} />
+            <Arrow x1={312} y1={230} x2={148} y2={230} color="#94A3B8" label="4→1" labelOffset={{ x: 0, y: 16 }} />
+            <Arrow x1={120} y1={202} x2={120} y2={98} color="#94A3B8" label="Win" labelOffset={{ x: -26, y: 0 }} />
+
+            <path d="M 395 52 L 375 72" stroke="#F87171" strokeWidth={2} fill="none" markerEnd="url(#schematicRefrigerationHeatOut)" />
+            <text x={382} y={48} fill="#FCA5A5" fontSize="9" fontWeight="700">QH</text>
+            <path d="M 65 235 L 85 222" stroke="#38BDF8" strokeWidth={2} fill="none" />
+            <text x={42} y={245} fill="#7DD3FC" fontSize="9" fontWeight="700">QL</text>
 
             <PointLabel x={120} y={150} number={1} processLabel="usc. evap." color={accentColor} />
             <PointLabel x={120} y={164} number={2} processLabel="usc. comp." color={accentColor} />
@@ -280,21 +286,21 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
 
             <Arrow x1={120} y1={82} x2={200} y2={135} color="#EF4444" label="Q_H" labelOffset={{ x: -16, y: 0 }} />
             <Arrow x1={260} y1={135} x2={340} y2={82} color="#3B82F6" label="Q_L" labelOffset={{ x: 16, y: 0 }} />
-            <text x={230} y={220} textAnchor="middle" fill={accentColor} fontSize="12" fontWeight="700">
-              W = Q_H - Q_L
+            <text x={230} y={218} textAnchor="middle" fill={accentColor} fontSize="12" fontWeight="700">
+              W = QH − QL
             </text>
 
-            <text x={230} y={255} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              1→2: Espansione isoterma a T_H
+            <text x={230} y={252} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
+              1→2: isoterma (espansione) a TH — assorbimento QH
             </text>
-            <text x={230} y={270} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              2→3: Espansione adiabatica T_H → T_L
+            <text x={230} y={268} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
+              2→3: adiabatica reversibile: TH → TL
             </text>
-            <text x={230} y={285} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              3→4: Compressione isoterma a T_L
+            <text x={230} y={284} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
+              3→4: isoterma (compressione) a TL — cessione QL
             </text>
             <text x={230} y={300} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              4→1: Compressione adiabatica T_L → T_H
+              4→1: adiabatica reversibile: TL → TH
             </text>
           </svg>
         );
