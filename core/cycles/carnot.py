@@ -6,7 +6,7 @@ from core.thermo import GasPoint, R_AIR, CP_AIR, CV_AIR, K_AIR
 def calc_carnot(Th_C: float, Tl_C: float, P_ref: float = 1.0, ds: float = 0.5):
     """
     Calcola il ciclo Carnot ideale su gas ideale.
-    
+
     Returns:
         pts: lista di GasPoint (chiusa, 5 elementi)
         results: dict risultati
@@ -20,24 +20,21 @@ def calc_carnot(Th_C: float, Tl_C: float, P_ref: float = 1.0, ds: float = 0.5):
     s1 = 1.0
     s2 = s1 + ds
 
-    h1 = CV_AIR * Th
-    h2 = h1
-    h3 = CV_AIR * Tl
-    h4 = h3
-
     v1 = v_ig(Th, P_ref)
     P2 = P_ref * np.exp(-(s2 - s1) / R_AIR)
     v2 = v_ig(Th, P2)
     P3 = P2 * (Tl / Th) ** (K_AIR / (K_AIR - 1))
     v3 = v_ig(Tl, P3)
-    s4 = s1
     P4 = P3 * np.exp((s2 - s1) / R_AIR)
     v4 = v_ig(Tl, P4)
 
     gp1 = GasPoint("1", Th_C, P_ref, CP_AIR, K_AIR, R=R_AIR)
-    gp2 = GasPoint("2", Th_C, P2, CP_AIR, K_AIR, R=R_AIR, h_ref=h1, s_ref=s1, T_ref_C=Th_C, P_ref_bar=P_ref)
-    gp3 = GasPoint("3", Tl_C, P3, CP_AIR, K_AIR, R=R_AIR, h_ref=h3, s_ref=s2, T_ref_C=Tl_C, P_ref_bar=P2)
-    gp4 = GasPoint("4", Tl_C, P4, CP_AIR, K_AIR, R=R_AIR, h_ref=h4, s_ref=s1, T_ref_C=Tl_C, P_ref_bar=P3)
+    gp2 = GasPoint("2", Th_C, P2, CP_AIR, K_AIR, R=R_AIR,
+                   h_ref=gp1.h, s_ref=s1, T_ref_C=Th_C, P_ref_bar=P_ref)
+    gp3 = GasPoint("3", Tl_C, P3, CP_AIR, K_AIR, R=R_AIR,
+                   h_ref=gp2.h, s_ref=s2, T_ref_C=Th_C, P_ref_bar=P2)
+    gp4 = GasPoint("4", Tl_C, P4, CP_AIR, K_AIR, R=R_AIR,
+                   h_ref=gp3.h, s_ref=s1, T_ref_C=Tl_C, P_ref_bar=P3)
 
     Q_in = Th * ds
     Q_out = Tl * ds

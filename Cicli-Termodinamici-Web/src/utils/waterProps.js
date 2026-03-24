@@ -108,10 +108,10 @@ export const getSaturationDome = async (fluid = 'Water') => {
   try {
     const pMin = lib.PropsSI('ptriple', 'D', 0, 'H', 0, fluid);
     const pMax = lib.PropsSI('pcrit', 'D', 0, 'H', 0, fluid) * 0.999;
-    
+
     const steps = 30;
     const s_liq = [], t_liq = [], s_vap = [], t_vap = [];
-    
+
     for (let i = 0; i <= steps; i++) {
       const p = pMin * Math.pow(pMax/pMin, i/steps);
       try {
@@ -121,12 +121,54 @@ export const getSaturationDome = async (fluid = 'Water') => {
         t_vap.push(lib.PropsSI('T', 'P', p, 'Q', 1, fluid) - 273.15);
       } catch { /* skip failed pressure steps */ }
     }
-    
+
     return {
       s: [...s_liq, ...s_vap.reverse()],
       t: [...t_liq, ...t_vap.reverse()]
     };
   } catch {
     return { s: [], t: [] };
+  }
+};
+
+export const getSaturationDomeFull = async (fluid = 'Water') => {
+  const lib = await ensureCoolProp();
+  try {
+    const pMin = lib.PropsSI('ptriple', 'D', 0, 'H', 0, fluid);
+    const pMax = lib.PropsSI('pcrit', 'D', 0, 'H', 0, fluid) * 0.999;
+
+    const steps = 30;
+    const s_liq = [], t_liq = [], h_liq = [], p_arr = [];
+    const s_vap = [], t_vap = [], h_vap = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const p = pMin * Math.pow(pMax / pMin, i / steps);
+      try {
+        s_liq.push(lib.PropsSI('S', 'P', p, 'Q', 0, fluid) / 1e3);
+        t_liq.push(lib.PropsSI('T', 'P', p, 'Q', 0, fluid) - 273.15);
+        h_liq.push(lib.PropsSI('H', 'P', p, 'Q', 0, fluid) / 1e3);
+        p_arr.push(p / 1e5);
+        s_vap.push(lib.PropsSI('S', 'P', p, 'Q', 1, fluid) / 1e3);
+        t_vap.push(lib.PropsSI('T', 'P', p, 'Q', 1, fluid) - 273.15);
+        h_vap.push(lib.PropsSI('H', 'P', p, 'Q', 1, fluid) / 1e3);
+      } catch { /* skip failed steps */ }
+    }
+
+    return {
+      ts: {
+        s: [...s_liq, ...s_vap.reverse()],
+        t: [...t_liq, ...t_vap.reverse()]
+      },
+      hs: {
+        s: [...s_liq, ...s_vap.reverse()],
+        h: [...h_liq, ...h_vap.reverse()]
+      },
+      ph: {
+        h: [...h_liq, ...h_vap.reverse()],
+        p: [...p_arr, ...p_arr.reverse()]
+      }
+    };
+  } catch {
+    return { ts: { s: [], t: [] }, hs: { s: [], h: [] }, ph: { h: [], p: [] } };
   }
 };

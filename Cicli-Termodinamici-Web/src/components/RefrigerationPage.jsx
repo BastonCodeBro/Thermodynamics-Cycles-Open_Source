@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { solveFluid, getSaturationDome } from '../utils/waterProps';
+import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
 import { Snowflake } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -12,6 +12,15 @@ import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#10B981';
 const isFiniteNumber = (value) => Number.isFinite(value);
+
+const REFRIGERANTS = [
+  { id: 'R134a', name: 'R134a' },
+  { id: 'R410A', name: 'R410A' },
+  { id: 'R32', name: 'R32' },
+  { id: 'R22', name: 'R22' },
+  { id: 'R290', name: 'R290 (Propano)' },
+  { id: 'R600a', name: 'R600a (Isobutano)' },
+];
 
 const pointAnnotations = (pts, labels, color) =>
   pts.map((p, i) => ({
@@ -35,6 +44,7 @@ const RefrigerationPage = () => {
   const [inputs, setInputs] = useState({
     t_evap: -10, t_cond: 40, sh: 5, sc: 5, eta_s: 0.8, mass_flow: 0.1,
   });
+  const [refrigerant, setRefrigerant] = useState('R134a');
 
   useEffect(() => {
     const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? phRef.current : null;
@@ -78,7 +88,7 @@ const RefrigerationPage = () => {
   const calculate = async () => {
     setLoading(true);
     setError(null);
-    const fluid = 'R134a';
+    const fluid = refrigerant;
     try {
       const st1sat = await solveFluid({ t: inputs.t_evap, q: 1 }, fluid);
       const st1 = await solveFluid({ p: st1sat.p, t: inputs.t_evap + inputs.sh }, fluid);
@@ -92,17 +102,13 @@ const RefrigerationPage = () => {
       const win = st2r.h - st1.h;
       const qlow = st1.h - st4.h;
 
-      const dome = await getSaturationDome(fluid);
-      const domePh = { h: dome.s, p: dome.t.map((_, i) => {
-        const tSat = dome.t[i];
-        try { return st1sat.p * (1 + tSat / 100); } catch { return 0; }
-      })};
+      const domeFull = await getSaturationDomeFull(fluid);
 
       setResults({
         allPoints: [st1, st2r, st3, st4],
         stats: { win, qlow, qhigh: st2r.h - st3.h, cop: qlow / win, cop_hp: (st2r.h - st3.h) / win, cooling_cap: qlow * inputs.mass_flow },
-        dome,
-        domePh,
+        dome: domeFull.ts,
+        domePh: domeFull.ph,
       });
     } catch (err) {
       setError('Parametri non validi: verificare le temperature di evaporazione e condensazione.');
@@ -171,7 +177,22 @@ const RefrigerationPage = () => {
       loading={loading} error={error} results={results} onCalculate={calculate} canCalculate={canCalculate}
       stats={stats} diagramTabs={diagramTabs} formulasSection={formulasSection}
       onDownloadPDF={handleDownloadPDF} downloadingPDF={downloadingPDF} EmptyIcon={Snowflake}>
-      <h3 className="card-title">Parametri R134a</h3>
+      <h3 className="card-title">Parametri Refrigerante</h3>
+      <div className="inputs-grid">
+        <div className="input-field">
+          <label className="input-label" style={{ color: COLOR }}>Refrigerante</label>
+          <select
+            value={refrigerant}
+            onChange={e => setRefrigerant(e.target.value)}
+            style={{
+              background: '#1E293B', color: '#E2E8F0', border: `1px solid ${COLOR}40`,
+              borderRadius: '8px', padding: '8px 12px', fontSize: '14px', width: '100%',
+            }}
+          >
+            {REFRIGERANTS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </div>
+      </div>
       <div className="inputs-grid">
         <InputField label="Temperatura Evaporazione" value={inputs.t_evap} onChange={v => setInputs({ ...inputs, t_evap: v })} unit="°C" accent={COLOR} />
         <InputField label="Temperatura Condensazione" value={inputs.t_cond} onChange={v => setInputs({ ...inputs, t_cond: v })} unit="°C" accent={COLOR} />

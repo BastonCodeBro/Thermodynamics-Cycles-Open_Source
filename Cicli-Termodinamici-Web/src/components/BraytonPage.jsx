@@ -7,7 +7,7 @@ import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
 import { exportToPDF } from '../utils/pdfExport';
-import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, genPvCurve, genTsCurve, genHsCurve } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#818CF8';
@@ -30,6 +30,7 @@ const BraytonPage = () => {
 
   const tsRef = useRef(null);
   const pvRef = useRef(null);
+  const hsRef = useRef(null);
   const schematicRef = useRef(null);
 
   const [inputs, setInputs] = useState({
@@ -37,24 +38,30 @@ const BraytonPage = () => {
   });
 
   useEffect(() => {
-    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : null;
+    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : activeTab === 2 ? hsRef.current : null;
     if (!results || !node) return;
 
     const renderActivePlot = async () => {
       if (activeTab === 0) {
+        const [p1, p2, p3, p4] = results.allPoints;
+        const seg1 = genTsCurve(p1, p2, 'isentropic');
+        const seg2 = genTsCurve(p2, p3, 'isobaric');
+        const seg3 = genTsCurve(p3, p4, 'isentropic');
+        const seg4 = genTsCurve(p4, p1, 'isobaric');
+        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
+        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
         const data = [
-          addTrace(
-            [...results.allPoints.map(p => p.s), results.allPoints[0].s],
-            [...results.allPoints.map(p => p.t), results.allPoints[0].t],
-            { name: 'Ciclo Brayton', color: COLOR, mode: 'lines+markers', markerSize: 10 }
-          ),
+          addTrace(x, y, { name: 'Ciclo Brayton', color: COLOR, mode: 'lines+markers', markerSize: 10 }),
         ];
         if (results.idealPoints) {
-          data.push(addTrace(
-            [...results.idealPoints.map(p => p.s), results.idealPoints[0].s],
-            [...results.idealPoints.map(p => p.t), results.idealPoints[0].t],
-            { name: 'Ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines', markerSize: 0 }
-          ));
+          const [i1, i2, i3, i4] = results.idealPoints;
+          const iseg1 = genTsCurve(i1, i2, 'isentropic');
+          const iseg2 = genTsCurve(i2, i3, 'isobaric');
+          const iseg3 = genTsCurve(i3, i4, 'isentropic');
+          const iseg4 = genTsCurve(i4, i1, 'isobaric');
+          const ix = [...iseg1.x, ...iseg2.x, ...iseg3.x, ...iseg4.x];
+          const iy = [...iseg1.y, ...iseg2.y, ...iseg3.y, ...iseg4.y];
+          data.push(addTrace(ix, iy, { name: 'Ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines', markerSize: 0 }));
         }
         const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(
@@ -64,18 +71,48 @@ const BraytonPage = () => {
         );
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 1) {
+        const [p1, p2, p3, p4] = results.allPoints;
+        const seg1 = genPvCurve(p1, p2, 'isentropic', 60, 1.4);
+        const seg2 = genPvCurve(p2, p3, 'isobaric');
+        const seg3 = genPvCurve(p3, p4, 'isentropic', 60, 1.33);
+        const seg4 = genPvCurve(p4, p1, 'isobaric');
+        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
+        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
         const data = [
-          addTrace(
-            [...results.allPoints.map(p => p.v), results.allPoints[0].v],
-            [...results.allPoints.map(p => p.p), results.allPoints[0].p],
-            { name: 'Ciclo P-v', color: '#A78BFA', mode: 'lines+markers', markerSize: 10 }
-          ),
+          addTrace(x, y, { name: 'Ciclo P-v', color: '#A78BFA', mode: 'lines+markers', markerSize: 10 }),
         ];
         const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-        layout.yaxis.type = 'log';
         layout.annotations = pointAnnotations(
           results.allPoints.map(p => ({ x: p.v, y: p.p })),
           ['1', '2', '3', '4'],
+          COLOR
+        );
+        renderPlot(node, data, layout, plotConfig);
+      } else if (activeTab === 2) {
+        const [p1, p2, p3, p4] = results.allPoints;
+        const seg1 = genHsCurve(p1, p2, 'isentropic');
+        const seg2 = genHsCurve(p2, p3, 'isobaric');
+        const seg3 = genHsCurve(p3, p4, 'isentropic');
+        const seg4 = genHsCurve(p4, p1, 'isobaric');
+        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
+        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
+        const data = [
+          addTrace(x, y, { name: 'Ciclo h-s', color: COLOR, mode: 'lines+markers', markerSize: 10 }),
+        ];
+        if (results.idealPoints) {
+          const [i1, i2, i3, i4] = results.idealPoints;
+          const iseg1 = genHsCurve(i1, i2, 'isentropic');
+          const iseg2 = genHsCurve(i2, i3, 'isobaric');
+          const iseg3 = genHsCurve(i3, i4, 'isentropic');
+          const iseg4 = genHsCurve(i4, i1, 'isobaric');
+          const ix = [...iseg1.x, ...iseg2.x, ...iseg3.x, ...iseg4.x];
+          const iy = [...iseg1.y, ...iseg2.y, ...iseg3.y, ...iseg4.y];
+          data.push(addTrace(ix, iy, { name: 'Ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines', markerSize: 0 }));
+        }
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
+        layout.annotations = pointAnnotations(
+          results.allPoints.map(p => ({ x: p.s, y: p.h })),
+          ['1\nAspiraz.', '2\nComp.', '3\nCombust.', '4\nTurbina'],
           COLOR
         );
         renderPlot(node, data, layout, plotConfig);
@@ -146,7 +183,7 @@ const BraytonPage = () => {
           { label: 'Rendimento', latex: '\\eta = \\frac{w_t - w_c}{q_{in}}', value: results.stats.eta },
           { label: 'Back Work Ratio', latex: 'BWR = \\frac{w_c}{w_t}', value: results.stats.bwr },
         ],
-        plotRefs: { ts: tsRef, pv: pvRef }, schematicRef,
+        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef }, schematicRef,
       });
     } catch (err) { console.error('PDF export error:', err); }
     finally { setDownloadingPDF(false); }
@@ -157,7 +194,9 @@ const BraytonPage = () => {
       content: <div ref={tsRef} className="plot-area" /> },
     { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1),
       content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 2, onClick: () => setActiveTab(2),
+    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2),
+      content: <div ref={hsRef} className="plot-area" /> },
+    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3),
       content: <div ref={schematicRef}><SchematicDiagram type="brayton" accentColor={COLOR} /></div> },
   ] : null;
 

@@ -67,10 +67,10 @@ class OttoCAD(ctk.CTkFrame):
         self.frame_plot.grid(row=0, column=1, padx=(0,10), pady=10, sticky="nsew")
         self.tabview = ctk.CTkTabview(self.frame_plot)
         self.tabview.pack(fill="both", expand=True, padx=5, pady=5)
-        for t in ["P-v", "T-s"]: self.tabview.add(t)
+        for t in ["P-v", "T-s", "h-s"]: self.tabview.add(t)
         
         self.figs, self.axes, self.canvases = {}, {}, {}
-        for t in ["P-v", "T-s"]:
+        for t in ["P-v", "T-s", "h-s"]:
             fig = Figure(figsize=(5,4), dpi=100, facecolor='#242424')
             ax = fig.add_subplot(111, facecolor='#242424')
             ax.tick_params(colors='white')
@@ -134,38 +134,49 @@ class OttoCAD(ctk.CTkFrame):
 
     def _draw(self):
         p1, p2, p3, p4, p2s, p4s = self.points
-        for t in ["P-v", "T-s"]:
+        for t in ["P-v", "T-s", "h-s"]:
             ax = self.axes[t]
             ax.clear()
             ax.set_title(f"Diagramma {t}")
             
-            def get_xy(p): return (p.v, p.P_bar) if t=="P-v" else (p.s, p.T_C)
+            def get_xy(p):
+                if t == "P-v": return (p.v, p.P_bar)
+                elif t == "h-s": return (p.s, p.h)
+                else: return (p.s, p.T_C)
             
-            # Paths
             def plot_path(pA, pB, style, color, label=""):
                 if t == "P-v":
                     vv = np.linspace(pA.v, pB.v, 50)
                     if abs(pA.v - pB.v) < 1e-7: # isochoric
                         pp = np.linspace(pA.P_bar, pB.P_bar, 50)
-                        ax.plot(vv, pp, linestyle=style, color=color, label=label)
-                    else: # polytropic approx
-                        if "s" in pB.name: # isentropic
-                            pp = pA.P_bar * (pA.v / vv)**1.4
-                        else:
-                            pp = np.linspace(pA.P_bar, pB.P_bar, 50)
-                        ax.plot(vv, pp, linestyle=style, color=color, label=label)
-                else:
-                    ss = np.linspace(pA.s, pB.s, 50)
-                    tt = np.linspace(pA.T_C, pB.T_C, 50)
-                    ax.plot(ss, tt, linestyle=style, color=color, label=label)
+                    else: # isentropic
+                        pp = pA.P_bar * (pA.v / vv)**1.4
+                    ax.plot(vv, pp, linestyle=style, color=color, label=label)
+                elif t == "h-s":
+                    if abs(pA.s - pB.s) < 1e-7: # isentropic
+                        ax.plot([pA.s, pB.s], [pA.h, pB.h], linestyle=style, color=color, label=label)
+                    else: # isochoric
+                        ss = np.linspace(pA.s, pB.s, 50)
+                        cp_val = pA.cp if hasattr(pA, 'cp') else 1.005
+                        ds = ss - pA.s
+                        ratio = np.exp(ds / cp_val)
+                        hh = pA.h * ratio + (pB.h - pA.h) * (ratio - 1) / (np.exp((pB.s - pA.s) / cp_val) - 1 or 1)
+                        ax.plot(ss, hh, linestyle=style, color=color, label=label)
+                else: # T-s
+                    if abs(pA.s - pB.s) < 1e-7: # isentropic
+                        ax.plot([pA.s, pB.s], [pA.T_C, pB.T_C], linestyle=style, color=color, label=label)
+                    else: # isochoric
+                        ss = np.linspace(pA.s, pB.s, 50)
+                        T1_K = pA.T_C + 273.15
+                        ds = ss - pA.s
+                        T_K = T1_K * np.exp(ds / 0.718)
+                        ax.plot(ss, T_K - 273.15, linestyle=style, color=color, label=label)
 
-            # Real cycle
             plot_path(p1, p2, "-", "orange", "Reale")
             plot_path(p2, p3, "-", "red")
             plot_path(p3, p4, "-", "cyan")
             plot_path(p4, p1, "-", "blue")
             
-            # Ideal cycle
             plot_path(p1, p2s, "--", "gray", "Ideale (η=1)")
             plot_path(p2s, p3, "--", "gray")
             plot_path(p3, p4s, "--", "gray")

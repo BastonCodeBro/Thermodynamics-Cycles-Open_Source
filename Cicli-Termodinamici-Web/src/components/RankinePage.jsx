@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { solveFluid, getSaturationDome } from '../utils/waterProps';
+import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
 import { Flame } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -131,14 +131,13 @@ const RankinePage = () => {
       const q_in = st3.h - st2.h;
       const w_net = wt - wp;
 
-      const dome = await getSaturationDome();
-      const domeHs = { s: dome.s, h: dome.t.map((_, i) => dome.t[i]) };
+      const domeFull = await getSaturationDomeFull();
 
       setResults({
         allPoints: [st1, st2, st3, st4],
         stats: { wt, wp, q_in, q_out: w_net - q_in + wp, eta: (w_net / q_in) * 100, power: w_net * inputs.mass_flow },
-        dome,
-        domeHs,
+        dome: domeFull.ts,
+        domeHs: domeFull.hs,
       });
     } catch (err) {
       setError('Errore nel calcolo: verificare i parametri di ingresso.');

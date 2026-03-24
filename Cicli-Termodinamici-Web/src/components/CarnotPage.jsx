@@ -6,7 +6,7 @@ import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
 import { exportToPDF } from '../utils/pdfExport';
-import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, genPvCurve, genTsCurve, genHsCurve } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#A78BFA';
@@ -32,6 +32,7 @@ const CarnotPage = () => {
 
   const tsRef = useRef(null);
   const pvRef = useRef(null);
+  const hsRef = useRef(null);
   const schematicRef = useRef(null);
 
   const [inputs, setInputs] = useState({
@@ -39,12 +40,19 @@ const CarnotPage = () => {
   });
 
   useEffect(() => {
-    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : null;
+    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : activeTab === 2 ? hsRef.current : null;
     if (!results || !node) return;
     const pts = results.allPoints;
     if (activeTab === 0) {
-      const data = [addTrace(
-        [...pts.map(p => p.s), pts[0].s], [...pts.map(p => p.t), pts[0].t],
+      const segments = [
+        genTsCurve(pts[0], pts[1], 'isothermal'),
+        genTsCurve(pts[1], pts[2], 'isentropic'),
+        genTsCurve(pts[2], pts[3], 'isothermal'),
+        genTsCurve(pts[3], pts[0], 'isentropic'),
+      ];
+      const x = segments.flatMap(s => s.x);
+      const y = segments.flatMap(s => s.y);
+      const data = [addTrace(x, y,
         { name: 'Ciclo Carnot', color: COLOR, mode: 'lines+markers', markerSize: 10 }
       )];
       const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
@@ -52,13 +60,35 @@ const CarnotPage = () => {
         ['1\nIsoT esp.', '2\nAdiab.', '3\nIsoT compr.', '4\nAdiab.'], COLOR);
       renderPlot(node, data, layout, plotConfig);
     } else if (activeTab === 1) {
-      const data = [addTrace(
-        [...pts.map(p => p.v || 0), pts[0].v || 0], [...pts.map(p => p.p), pts[0].p],
+      const segments = [
+        genPvCurve(pts[0], pts[1], 'isothermal'),
+        genPvCurve(pts[1], pts[2], 'isentropic', 60, K),
+        genPvCurve(pts[2], pts[3], 'isothermal'),
+        genPvCurve(pts[3], pts[0], 'isentropic', 60, K),
+      ];
+      const x = segments.flatMap(s => s.x);
+      const y = segments.flatMap(s => s.y);
+      const data = [addTrace(x, y,
         { name: 'Ciclo P-v', color: '#C4B5FD', mode: 'lines+markers', markerSize: 10 }
       )];
       const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-      layout.yaxis.type = 'log';
       layout.annotations = pointAnnotations(pts.map(p => ({ x: p.v || 0, y: p.p })),
+        ['1', '2', '3', '4'], COLOR);
+      renderPlot(node, data, layout, plotConfig);
+    } else if (activeTab === 2) {
+      const segments = [
+        genHsCurve(pts[0], pts[1], 'isothermal'),
+        genHsCurve(pts[1], pts[2], 'isentropic'),
+        genHsCurve(pts[2], pts[3], 'isothermal'),
+        genHsCurve(pts[3], pts[0], 'isentropic'),
+      ];
+      const x = segments.flatMap(s => s.x);
+      const y = segments.flatMap(s => s.y);
+      const data = [addTrace(x, y,
+        { name: 'Ciclo h-s', color: '#67E8F9', mode: 'lines+markers', markerSize: 10 }
+      )];
+      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
+      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.h })),
         ['1', '2', '3', '4'], COLOR);
       renderPlot(node, data, layout, plotConfig);
     }
@@ -125,7 +155,7 @@ const CarnotPage = () => {
           { label: 'Calore Uscita', latex: 'Q_{out} = T_L \\cdot \\Delta s', value: results.stats.Q_out },
           { label: 'Lavoro Netto', latex: 'W_{net} = Q_{in} - Q_{out}', value: results.stats.W_net },
         ],
-        plotRefs: { ts: tsRef, pv: pvRef }, schematicRef,
+        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef }, schematicRef,
       });
     } catch (err) { console.error(err); }
     finally { setDownloadingPDF(false); }
@@ -134,7 +164,8 @@ const CarnotPage = () => {
   const diagramTabs = results ? [
     { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
     { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={schematicRef}><SchematicDiagram type="carnot" accentColor={COLOR} /></div> },
+    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
+    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="carnot" accentColor={COLOR} /></div> },
   ] : null;
 
   const formulasSection = results ? (

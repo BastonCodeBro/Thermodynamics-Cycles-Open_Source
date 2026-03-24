@@ -285,16 +285,16 @@ const SchematicDiagram = ({ type, accentColor = '#38BDF8', width = 460, height =
             </text>
 
             <text x={230} y={255} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              1→2: Isotherm expansion at T_H
+              1→2: Espansione isoterma a T_H
             </text>
             <text x={230} y={270} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              2→3: Adiabatic expansion T_H → T_L
+              2→3: Espansione adiabatica T_H → T_L
             </text>
             <text x={230} y={285} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              3→4: Isotherm compression at T_L
+              3→4: Compressione isoterma a T_L
             </text>
             <text x={230} y={300} textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="600">
-              4→1: Adiabatic compression T_L → T_H
+              4→1: Compressione adiabatica T_L → T_H
             </text>
           </svg>
         );

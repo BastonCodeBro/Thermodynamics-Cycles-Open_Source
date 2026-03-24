@@ -32,7 +32,7 @@ const Hero = () => {
           <button className="btn-primary" onClick={scrollToCycles}>
             Inizia Ora <ArrowRight className="btn-icon" />
           </button>
-          <a href="https://github.com/anomalyco/opencode" className="btn-outline" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/BastonCodeBro/Thermodynamics-Cycles-Open_Source" className="btn-outline" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
         </div>
