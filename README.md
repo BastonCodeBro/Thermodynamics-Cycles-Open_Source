@@ -1,61 +1,96 @@
 # Thermodynamic Cycles - Web Suite ⚡ / Cicli Termodinamici
-*Created by **Prof. Ing. Andrea Viola** | Creato dal **Prof. Ing. Andrea Viola***
-*For educational purposes only | Esclusivamente per scopi didattici*
 
-🇬🇧 An interactive educational web application for teaching and studying ideal and real thermodynamic cycles.
-🇮🇹 Una suite software didattica e interattiva per l'insegnamento e lo studio dei principali cicli termodinamici.
+*Creato dal **Prof. Ing. Andrea Viola** | Created by **Prof. Ing. Andrea Viola***
+*Per scopi didattici | For educational purposes only*
 
-Developed in Python with **Streamlit** and **Matplotlib**, it allows dynamic visualization of physical parameters and performance (efficiency, work, heat), with **automatic English/Italian translation** based on the user's browser.
+---
 
-## 📂 Project Structure / Struttura del Progetto
-- `streamlit_app.py`: The main Web Application file (Deploy this on Streamlit Community Cloud).
-- `calcolatore_*.py`: Desktop backend modules (Tkinter + Matplotlib) for local use.
-- `cicli_termodinamici.py`: Desktop Unified Launcher for Windows/Mac.
-- `requirements.txt`: Python dependencies.
+## 🇬🇧 English
 
-## 🚀 Main Features / Funzionalità
-The program integrates **5 complete modules**:
-1. **💧 Rankine Cycle (Steam/Water)**: IAPWS-IF97 analysis, exact saturation dome, vapor quality.
-2. **🔥 Brayton Cycle (Gas Turbine)**: Compressor, combustion chamber, turbine analysis, BWR.
-3. **⚙️ Otto Cycle (Spark Ignition Engine)**: P-v and T-s charts.
-4. **🛢️ Diesel Cycle (Compression Ignition)**: P-v and T-s charts.
-5. **❄️ Refrigeration Cycle (Heat Pump)**: COP analysis for cooling and heating.
+An interactive educational web application for teaching and studying ideal and real thermodynamic cycles.
 
-### Advanced Graphics
-*   Visual distinction between **Real Cycle (solid lines)** and **Ideal/Carnot Cycle (dashed lines)**.
-*   Interactive Plant Schematics alongside Thermodynamic Diagrams (T-s, P-v, P-h).
+### Features
+- **💧 Rankine Cycle (Steam/Water)**: IAPWS-IF97 analysis, saturation dome, vapor quality
+- **🔥 Brayton Cycle (Gas Turbine)**: Compressor, combustion, turbine, BWR analysis
+- **⚙️ Otto Cycle**: Spark ignition engine with P-v/T-s diagrams
+- **🛢️ Diesel Cycle**: Compression ignition engine with P-v/T-s diagrams  
+- **❄️ Refrigeration Cycle**: R134a with COP analysis (evaporation/condensation)
+- **🔄 Carnot Cycle**: Ideal cycle comparison with efficiency calculation
+- **🎨 Air Laboratory**: Free-form construction of complex cycles with multi-phase support
 
-## 📥 Installazione e Avvio
-Per eseguire l'applicazione web in locale è necessario **Python 3.9+**.
+### Advanced Features
+- **Parametric Analysis**: Sweep parameter (e.g., compression ratio r) vs efficiency
+- **Cycle Comparison**: Overlay multiple cycles on T-s diagram
+- **Export**: PDF reports + CSV data + PNG charts
+- **i18n**: Automatic English/Italian translation based on browser language
 
-1. Clona il repository:
-   ```bash
-   git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
-   cd cicli_termodinamici
-   ```
-2. Installa le dipendenze:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Avvia la Web App su Streamlit:
-   ```bash
-   streamlit run streamlit_app.py
-   ```
-   *Si aprirà una scheda nel tuo browser con l'applicazione!*
+### Installation
+```bash
+git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
+cd cicli_termodinamici
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
 
-## 🌐 Deploy su Streamlit Community Cloud (Sito Pubblico Gratuito)
-L'applicazione è ora una VERA Web App. Per renderla accessibile gratis a chiunque dal proprio browser:
+### Deploy
+Deploy to [Streamlit Community Cloud](https://share.streamlit.io/) by selecting `streamlit_app.py` as the main file.
 
-1. Fai Login su [Streamlit Community Cloud](https://share.streamlit.io/) usando il tuo account GitHub.
-2. Clicca su **"New app"**.
-3. Seleziona questa repository (`BastonCodeBro/Thermodynamics-Cycles-Open_Source`).
-4. Nel campo `Main file path` inserisci: `streamlit_app.py`
-5. Clicca **Deploy!**
+---
 
-In pochi minuti Streamlit creerà un link pubblico gratuito (es. `https://nome-scelto.streamlit.app`) che i tuoi studenti potranno usare da PC o cellulare senza scaricare nulla.
+## 🇮🇹 Italiano
 
-### Versione Desktop Inclusa
-Se si preferisce usare il programma locale tradizionale (con GUI Tkinter nativa), lanciare `python cicli_termodinamici.py` oppure creare l'eseguibile con `pyinstaller --noconsole --onefile cicli_termodinamici.py`.
+Suite software didattica e interattiva per l'insegnamento e lo studio dei cicli termodinamici.
 
-## 📝 Licenza
+### Funzionalità
+- **💧 Ciclo Rankine (Acqua/Vapore)**: Analisi IAPWS-IF97, cupola di saturazione
+- **🔥 Ciclo Brayton (Turbina a Gas)**: Compressore, combustione, turbina, BWR
+- **⚙️ Ciclo Otto**: Motore ad accensione comandata con diagrammi P-v/T-s
+- **🛢️ Ciclo Diesel**: Motore ad accensione per compressione
+- **❄️ Ciclo Frigorifero**: R134a con analisi COP
+- **🔄 Ciclo Carnot**: Ciclo ideale con confronto rendimento
+- **🎨 Laboratorio Aria**: Costruzione libera di cicli complessi
+
+### Funzionalità Avanzate
+- **Analisi Parametrica**: Sweep parametri (es. r vs η)
+- **Confronto Cicli**: Sovrapponi più cicli su diagramma T-s
+- **Esportazione**: Report PDF + dati CSV + immagini PNG
+- **i18n**: Traduzione automatica italiano/inglese
+
+### Installazione
+```bash
+git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
+cd cicli_termodinamici
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+### Deploy
+Esegui il deploy su [Streamlit Community Cloud](https://share.streamlit.io/) selezionando `streamlit_app.py` come file principale.
+
+---
+
+## 📂 Struttura del Progetto / Project Structure
+
+```
+├── streamlit_app.py          # Web App principale / Main Web App
+├── calcolatore_*.py          # Moduli desktop / Desktop modules
+├── cicli_termodinamici.py     # Launcher desktop unificato
+├── core/                      # Core thermodynamics
+│   ├── thermo.py             # GasPoint, Steam, R134a tables
+│   └── cycles/               # Cycle calculations
+│       ├── otto.py
+│       ├── diesel.py
+│       ├── brayton.py
+│       ├── frigo.py
+│       └── carnot.py
+├── components/                # UI components
+├── config/                    # Theme configuration
+├── translations/              # i18n JSON files
+├── requirements.txt           # Dipendenze / Dependencies
+└── README.md
+```
+
+---
+
+## 📝 Licenza / License
 Progetto rilasciato sotto licenza MIT - sentiti libero di usarlo e modificarlo per la didattica!

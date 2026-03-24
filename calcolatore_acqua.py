@@ -319,7 +319,7 @@ class WaterThermoCAD(ctk.CTkFrame):
                 self.update_gui()
                 popup.destroy()
             except Exception as e:
-                print("Stato non valdo P-T", e)
+                print("Stato non valido P-T", e)
 
         ctk.CTkButton(popup, text="Salva Modifiche", fg_color="#2A8C4B", hover_color="#1E6636", command=save_changes).pack(pady=20)
 
