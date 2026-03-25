@@ -48,49 +48,59 @@ const RefrigerationPage = () => {
   const [refrigerant, setRefrigerant] = useState('R134a');
 
   useEffect(() => {
-    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? phRef.current : null;
-    if (!results || !node) return;
-    const pts = results.allPoints;
-    const paths = results.segmentPaths;
-    if (!paths || paths.length !== 4) return;
-    if (activeTab === 0) {
-      const data = [
-        addDomeTrace(results.dome.s, results.dome.t),
-        ...paths.map((path, k) =>
-          addTrace(path.map(p => p.s), path.map(p => p.t), {
-            name: `Tratto ${k + 1}`,
-            color: SEGMENT_COLORS[k],
-            width: 3,
-            mode: 'lines',
-          })
-        ),
-        addTrace(pts.map(p => p.s), pts.map(p => p.t), { name: 'Stati', color: COLOR, mode: 'markers', markerSize: 8 }),
-      ];
-      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
-        ['1\nEvap.', '2\nComp.', '3\nCond.', '4\nValv.'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    } else if (activeTab === 1) {
-      const data = [
-        results.domePh ? addDomeTrace(results.domePh.h, results.domePh.p) : null,
-        ...paths.map((path, k) =>
-          addTrace(path.map(p => p.h), path.map(p => p.p), {
-            name: `Tratto ${k + 1}`,
-            color: SEGMENT_COLORS[k],
-            width: 3,
-            mode: 'lines',
-          })
-        ),
-        addTrace(pts.map(p => p.h), pts.map(p => p.p), { name: 'Stati', color: '#34D399', mode: 'markers', markerSize: 8 }),
-      ].filter(Boolean);
-      const layout = plotLayout('Entalpia h (kJ/kg)', 'Pressione P (bar)');
-      layout.yaxis.type = 'log';
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.h, y: p.p })),
-        ['1', '2', '3', '4'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    }
-    return () => cleanupPlot(node);
-  }, [results, activeTab]);
+    if (!results) return;
+
+    const renderAllPlots = async () => {
+      const pts = results.allPoints;
+      const paths = results.segmentPaths;
+      if (!paths || paths.length !== 4) return;
+
+      if (tsRef.current) {
+        const data = [
+          addDomeTrace(results.dome.s, results.dome.t),
+          ...paths.map((path, k) =>
+            addTrace(path.map(p => p.s), path.map(p => p.t), {
+              name: `Tratto ${k + 1}`,
+              color: SEGMENT_COLORS[k],
+              width: 3,
+              mode: 'lines',
+            })
+          ),
+          addTrace(pts.map(p => p.s), pts.map(p => p.t), { name: 'Stati', color: COLOR, mode: 'markers', markerSize: 8 }),
+        ];
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
+          ['1\nEvap.', '2\nComp.', '3\nCond.', '4\nValv.'], COLOR);
+        renderPlot(tsRef.current, data, layout, plotConfig);
+      }
+
+      if (phRef.current) {
+        const data = [
+          results.domePh ? addDomeTrace(results.domePh.h, results.domePh.p) : null,
+          ...paths.map((path, k) =>
+            addTrace(path.map(p => p.h), path.map(p => p.p), {
+              name: `Tratto ${k + 1}`,
+              color: SEGMENT_COLORS[k],
+              width: 3,
+              mode: 'lines',
+            })
+          ),
+          addTrace(pts.map(p => p.h), pts.map(p => p.p), { name: 'Stati', color: '#34D399', mode: 'markers', markerSize: 8 }),
+        ].filter(Boolean);
+        const layout = plotLayout('Entalpia h (kJ/kg)', 'Pressione P (bar)');
+        layout.yaxis.type = 'log';
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.h, y: p.p })),
+          ['1', '2', '3', '4'], COLOR);
+        renderPlot(phRef.current, data, layout, plotConfig);
+      }
+    };
+
+    renderAllPlots();
+    return () => {
+      cleanupPlot(tsRef.current);
+      cleanupPlot(phRef.current);
+    };
+  }, [results]);
 
   const canCalculate = isFiniteNumber(inputs.t_evap) && isFiniteNumber(inputs.t_cond)
     && isFiniteNumber(inputs.sh) && isFiniteNumber(inputs.sc)

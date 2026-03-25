@@ -55,10 +55,9 @@ const OttoPage = () => {
   });
 
   useEffect(() => {
-    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : activeTab === 2 ? hsRef.current : null;
-    if (!results || !node) return;
+    if (!results) return;
 
-    const renderActivePlot = async () => {
+    const renderAllPlots = async () => {
       const pts = results.allPoints;
       const pathOptions = [
         { processType: 'polytropic', model: 'ideal-gas' },
@@ -74,7 +73,7 @@ const OttoPage = () => {
         generateProcessPath(pts[3], pts[0], 'Air', 64, pathOptions[3]),
       ]);
 
-      if (activeTab === 0) {
+      if (tsRef.current) {
         const data = [
           ...paths.map((path, index) =>
             addTrace(path.map((p) => p.s), path.map((p) => p.t), {
@@ -96,8 +95,10 @@ const OttoPage = () => {
           ['1\nAspirazione', '2\nCompressione', '3\nCombustione', '4\nEspansione'],
           COLOR,
         );
-        renderPlot(node, data, layout, plotConfig);
-      } else if (activeTab === 1) {
+        renderPlot(tsRef.current, data, layout, plotConfig);
+      }
+
+      if (pvRef.current) {
         const data = [
           ...paths.map((path, index) =>
             addTrace(path.map((p) => p.v), path.map((p) => p.p), {
@@ -118,8 +119,10 @@ const OttoPage = () => {
           yaxis: { type: 'log' },
         });
         layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(node, data, layout, plotConfig);
-      } else {
+        renderPlot(pvRef.current, data, layout, plotConfig);
+      }
+
+      if (hsRef.current) {
         const data = [
           ...paths.map((path, index) =>
             addTrace(path.map((p) => p.s), path.map((p) => p.h), {
@@ -137,13 +140,17 @@ const OttoPage = () => {
         ];
         const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(node, data, layout, plotConfig);
+        renderPlot(hsRef.current, data, layout, plotConfig);
       }
     };
 
-    renderActivePlot();
-    return () => cleanupPlot(node);
-  }, [results, activeTab]);
+    renderAllPlots();
+    return () => {
+      cleanupPlot(tsRef.current);
+      cleanupPlot(pvRef.current);
+      cleanupPlot(hsRef.current);
+    };
+  }, [results]);
 
   const canCalculate = isFiniteNumber(inputs.r)
     && isFiniteNumber(inputs.p_low)

@@ -68,7 +68,14 @@ const CyclePageLayout = ({
                     ))}
                   </div>
                   <div className="diagram-tab-content">
-                    {diagramTabs.find(t => t.active)?.content}
+                    {diagramTabs.map((tab, i) => (
+                      <div
+                        key={tab.id || i}
+                        className={tab.active ? 'diagram-panel-active' : 'diagram-panel-hidden'}
+                      >
+                        {tab.content}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

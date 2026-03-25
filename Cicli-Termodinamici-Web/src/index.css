@@ -922,6 +922,22 @@ p { margin: 0; }
 
 .diagram-tab-content {
   min-height: 400px;
+  position: relative;
+}
+
+.diagram-panel-active {
+  display: block;
+}
+
+.diagram-panel-hidden {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 450px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {

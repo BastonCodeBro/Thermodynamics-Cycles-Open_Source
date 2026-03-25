@@ -68,21 +68,12 @@ const RankinePage = () => {
   });
 
   useEffect(() => {
-    const node =
-      activeTab === 0
-        ? tsRef.current
-        : activeTab === 1
-          ? hsRef.current
-          : activeTab === 2
-            ? pvRef.current
-            : null;
-
-    if (!results || !node) return undefined;
+    if (!results) return undefined;
 
     const realLabels = ['1', '2', '3', '4'];
 
-    const renderActivePlot = () => {
-      if (activeTab === 0) {
+    const renderAllPlots = () => {
+      if (tsRef.current) {
         const data = [
           results.dome?.ts?.s?.length
             ? addFillTrace(results.dome.ts.s, results.dome.ts.t, {
@@ -163,8 +154,10 @@ const RankinePage = () => {
             IDEAL_COLOR,
           ),
         ];
-        renderPlot(node, data, layout, plotConfig);
-      } else if (activeTab === 1) {
+        renderPlot(tsRef.current, data, layout, plotConfig);
+      }
+
+      if (hsRef.current) {
         const data = [
           results.dome?.hs?.s?.length
             ? addFillTrace(results.dome.hs.s, results.dome.hs.h, {
@@ -245,8 +238,10 @@ const RankinePage = () => {
             IDEAL_COLOR,
           ),
         ];
-        renderPlot(node, data, layout, plotConfig);
-      } else if (activeTab === 2) {
+        renderPlot(hsRef.current, data, layout, plotConfig);
+      }
+
+      if (pvRef.current) {
         const data = [
           results.dome?.pv?.v?.length
             ? addFillTrace(results.dome.pv.v, results.dome.pv.p, {
@@ -330,13 +325,17 @@ const RankinePage = () => {
             IDEAL_COLOR,
           ),
         ];
-        renderPlot(node, data, layout, plotConfig);
+        renderPlot(pvRef.current, data, layout, plotConfig);
       }
     };
 
-    renderActivePlot();
-    return () => cleanupPlot(node);
-  }, [activeTab, results]);
+    renderAllPlots();
+    return () => {
+      cleanupPlot(tsRef.current);
+      cleanupPlot(hsRef.current);
+      cleanupPlot(pvRef.current);
+    };
+  }, [results]);
 
   const canCalculate =
     isFiniteNumber(inputs.p_high) &&
