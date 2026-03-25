@@ -8,12 +8,17 @@ from matplotlib.backends.backend_pdf import PdfPages
 import mplcursors
 from tkinter.filedialog import asksaveasfilename
 
+from core.path_generator import (
+    isentropic_path, isochoric_path, polytropic_path,
+    add_direction_arrow, _get_diagram_coords
+)
+
 plt.style.use('dark_background')
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 class OttoPoint:
-    def __init__(self, name, T_C, P_bar, v, s=0, h=0):
+    def __init__(self, name, T_C, P_bar, v, s=0, h=0, cp=1.005, k=1.4, R=0.287):
         self.name = name
         self.T_C = T_C
         self.T_K = T_C + 273.15
@@ -21,6 +26,9 @@ class OttoPoint:
         self.v = v
         self.s = s
         self.h = h
+        self.cp = cp
+        self.k = k
+        self.R = R
 
 class OttoCAD(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
@@ -96,7 +104,7 @@ class OttoCAD(ctk.CTkFrame):
             v1 = (R * T1_K) / (P1 * 100)
             v2 = v1 / r
             
-            # 1->2 (isentropic compression)
+            # 1->2 (isentropic compression, real with eta)
             T2s_K = T1_K * (r**(k-1))
             T2_K = T1_K + (T2s_K - T1_K) / eta
             P2_bar = P1 * (T2_K / T1_K) * (v1 / v2)
@@ -105,7 +113,7 @@ class OttoCAD(ctk.CTkFrame):
             P3_bar = P2_bar * (T3_K / T2_K)
             v3 = v2
             
-            # 3->4 (isentropic expansion)
+            # 3->4 (isentropic expansion, real with eta)
             T4s_K = T3_K * ((1/r)**(k-1))
             T4_K = T3_K - eta * (T3_K - T4s_K)
             P4_bar = P3_bar * (T4_K / T3_K) * (v3 / v1)
@@ -113,12 +121,12 @@ class OttoCAD(ctk.CTkFrame):
 
             def entropy(T_K, P_bar): return cp * np.log(T_K/273.15) - R * np.log(P_bar/1.0)
             
-            p1 = OttoPoint("1", T1_C, P1, v1, entropy(T1_K, P1))
-            p2 = OttoPoint("2", T2_K-273.15, P2_bar, v2, entropy(T2_K, P2_bar))
-            p2s = OttoPoint("2s", T2s_K-273.15, P1*(r**k), v2, p1.s)
-            p3 = OttoPoint("3", T3_C, P3_bar, v3, entropy(T3_K, P3_bar))
-            p4 = OttoPoint("4", T4_K-273.15, P4_bar, v4, entropy(T4_K, P4_bar))
-            p4s = OttoPoint("4s", T4s_K-273.15, P3_bar*((1/r)**k), v4, p3.s)
+            p1 = OttoPoint("1", T1_C, P1, v1, entropy(T1_K, P1), cp=cp, k=k, R=R)
+            p2 = OttoPoint("2", T2_K-273.15, P2_bar, v2, entropy(T2_K, P2_bar), cp=cp, k=k, R=R)
+            p2s = OttoPoint("2s", T2s_K-273.15, P1*(r**k), v2, p1.s, cp=cp, k=k, R=R)
+            p3 = OttoPoint("3", T3_C, P3_bar, v3, entropy(T3_K, P3_bar), cp=cp, k=k, R=R)
+            p4 = OttoPoint("4", T4_K-273.15, P4_bar, v4, entropy(T4_K, P4_bar), cp=cp, k=k, R=R)
+            p4s = OttoPoint("4s", T4s_K-273.15, P3_bar*((1/r)**k), v4, p3.s, cp=cp, k=k, R=R)
             
             self.points = [p1, p2, p3, p4, p2s, p4s]
             
@@ -134,61 +142,76 @@ class OttoCAD(ctk.CTkFrame):
 
     def _draw(self):
         p1, p2, p3, p4, p2s, p4s = self.points
+        diagram_map = {"P-v": "P-v", "T-s": "T-s", "h-s": "h-s"}
+
         for t in ["P-v", "T-s", "h-s"]:
             ax = self.axes[t]
             ax.clear()
             ax.set_title(f"Diagramma {t}")
-            
+
             def get_xy(p):
                 if t == "P-v": return (p.v, p.P_bar)
                 elif t == "h-s": return (p.s, p.h)
                 else: return (p.s, p.T_C)
-            
-            def plot_path(pA, pB, style, color, label=""):
-                if t == "P-v":
-                    vv = np.linspace(pA.v, pB.v, 50)
-                    if abs(pA.v - pB.v) < 1e-7: # isochoric
-                        pp = np.linspace(pA.P_bar, pB.P_bar, 50)
-                    else: # isentropic
-                        pp = pA.P_bar * (pA.v / vv)**1.4
-                    ax.plot(vv, pp, linestyle=style, color=color, label=label)
-                elif t == "h-s":
-                    if abs(pA.s - pB.s) < 1e-7: # isentropic
-                        ax.plot([pA.s, pB.s], [pA.h, pB.h], linestyle=style, color=color, label=label)
-                    else: # isochoric
-                        ss = np.linspace(pA.s, pB.s, 50)
-                        cp_val = pA.cp if hasattr(pA, 'cp') else 1.005
-                        ds = ss - pA.s
-                        ratio = np.exp(ds / cp_val)
-                        hh = pA.h * ratio + (pB.h - pA.h) * (ratio - 1) / (np.exp((pB.s - pA.s) / cp_val) - 1 or 1)
-                        ax.plot(ss, hh, linestyle=style, color=color, label=label)
-                else: # T-s
-                    if abs(pA.s - pB.s) < 1e-7: # isentropic
-                        ax.plot([pA.s, pB.s], [pA.T_C, pB.T_C], linestyle=style, color=color, label=label)
-                    else: # isochoric
-                        ss = np.linspace(pA.s, pB.s, 50)
-                        T1_K = pA.T_C + 273.15
-                        ds = ss - pA.s
-                        T_K = T1_K * np.exp(ds / 0.718)
-                        ax.plot(ss, T_K - 273.15, linestyle=style, color=color, label=label)
 
-            plot_path(p1, p2, "-", "orange", "Reale")
-            plot_path(p2, p3, "-", "red")
-            plot_path(p3, p4, "-", "cyan")
-            plot_path(p4, p1, "-", "blue")
-            
-            plot_path(p1, p2s, "--", "gray", "Ideale (η=1)")
-            plot_path(p2s, p3, "--", "gray")
-            plot_path(p3, p4s, "--", "gray")
-            plot_path(p4s, p1, "--", "gray")
+            # ── Cycle segment definitions: (start, end, process_type, color, style, label) ──
+            # Real cycle: 1→2 polytropic(compression), 2→3 isochoric, 3→4 polytropic(expansion), 4→1 isochoric
+            real_segments = [
+                (p1, p2, "polytropic", "orange", "-",  "Reale"),
+                (p2, p3, "isochoric",  "red",    "-",  ""),
+                (p3, p4, "polytropic", "cyan",   "-",  ""),
+                (p4, p1, "isochoric",  "blue",   "-",  ""),
+            ]
+            # Ideal cycle: 1→2s isentropic, 2s→3 isochoric, 3→4s isentropic, 4s→1 isochoric
+            ideal_segments = [
+                (p1,  p2s, "isentropic", "gray", "--", "Ideale (η=1)"),
+                (p2s, p3,  "isochoric",  "gray", "--", ""),
+                (p3,  p4s, "isentropic", "gray", "--", ""),
+                (p4s, p1,  "isochoric",  "gray", "--", ""),
+            ]
 
+            # ── Draw ideal cycle (dashed, behind) ──
+            for pA, pB, proc, col, sty, lbl in ideal_segments:
+                path = self._gen_path(pA, pB, proc, n=80)
+                x, y = _get_diagram_coords(path, t)
+                ax.plot(x, y, linestyle=sty, color=col, linewidth=1.5, alpha=0.5, label=lbl if lbl else None)
+
+            # ── Draw real cycle (solid, on top) ──
+            real_paths = []
+            for pA, pB, proc, col, sty, lbl in real_segments:
+                path = self._gen_path(pA, pB, proc, n=80)
+                real_paths.append((path, col))
+                x, y = _get_diagram_coords(path, t)
+                ax.plot(x, y, linestyle=sty, color=col, linewidth=2.5, alpha=0.95, label=lbl if lbl else None)
+
+            # ── Direction arrows (clockwise for power cycle) ──
+            for path, col in real_paths:
+                x, y = _get_diagram_coords(path, t)
+                if len(x) > 2:
+                    add_direction_arrow(ax, x, y, color=col, size=12, position=0.5)
+
+            # ── Scatter state points ──
             for p in [p1, p2, p3, p4]:
                 x, y = get_xy(p)
                 ax.scatter(x, y, color="white", zorder=5)
                 ax.annotate(p.name, (x, y), xytext=(5,5), textcoords="offset points")
-            
+
             ax.grid(True, alpha=0.3)
+            ax.legend(fontsize=8, loc="best", facecolor='#1A1A2E', labelcolor='white', framealpha=0.85)
             self.canvases[t].draw()
+
+    @staticmethod
+    def _gen_path(pA, pB, process, n=80):
+        """Generate path arrays between two OttoPoints using path_generator."""
+        if process == "isentropic":
+            return isentropic_path(pA, pB, n)
+        elif process == "isochoric":
+            return isochoric_path(pA, pB, n)
+        elif process == "polytropic":
+            # For real (non-isentropic) compression/expansion: infer exponent
+            return polytropic_path(pA, pB, n_exp=None, n=n)
+        else:
+            return polytropic_path(pA, pB, n_exp=None, n=n)
 
 if __name__ == "__main__":
     app = ctk.CTk()

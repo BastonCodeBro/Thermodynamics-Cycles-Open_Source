@@ -11,6 +11,12 @@ import mplcursors
 from tkinter.filedialog import asksaveasfilename
 import os
 
+from core.path_generator import (
+    iapws_isobaric_path, iapws_isentropic_path, iapws_isenthalpic_path,
+    iapws_auto_path, SimplePt,
+    add_direction_arrow, _get_diagram_coords
+)
+
 plt.style.use('dark_background')
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -834,58 +840,54 @@ class WaterThermoCAD(ctk.CTkFrame):
         self.lbl_report.configure(text=report)
 
     def generate_path(self, pt1, pt2, num_points=50):
+        """
+        Generate a thermodynamically correct path between two state points.
+        Uses IAPWS-97 via path_generator for physically accurate curves,
+        including proper saturation dome crossings for isobaric processes.
+        """
         dp = pt2.P_bar - pt1.P_bar
         ds = pt2.s - pt1.s
         dh = pt2.h - pt1.h
-        dv = pt2.v - pt1.v
-        
+
         is_isobaric = abs(dp) < 1e-2
         is_isentropic = abs(ds) < 2e-2
         is_isenthalpic = abs(dh) < 1e-1
-        is_isochoric = abs(dv) < 1e-6
-        
-        path_states = []
+
         try:
             if is_isobaric:
-                h_vals = np.linspace(pt1.h, pt2.h, num_points)
-                for h in h_vals:
-                    path_states.append(IAPWS97(P=pt1.P_bar/10.0, h=h))
+                path = iapws_isobaric_path(pt1.P_bar, pt1.h, pt2.h, num_points)
             elif is_isentropic:
-                if pt1.P_bar > 0 and pt2.P_bar > 0:
-                    P_vals = np.geomspace(pt1.P_bar, pt2.P_bar, num_points)
-                else:
-                    P_vals = np.linspace(pt1.P_bar, pt2.P_bar, num_points)
-                for p in P_vals:
-                    path_states.append(IAPWS97(P=p/10.0, s=pt1.s))
+                result = iapws_isentropic_path(pt1.s, pt1.P_bar, pt2.P_bar, num_points)
+                if result is None:
+                    return [pt1, pt2]
+                path = result
             elif is_isenthalpic:
-                P_vals = np.linspace(pt1.P_bar, pt2.P_bar, num_points)
-                for p in P_vals:
-                    path_states.append(IAPWS97(P=p/10.0, h=pt1.h))
-            elif is_isochoric:
-                P_vals = np.linspace(pt1.P_bar, pt2.P_bar, num_points)
-                for p in P_vals:
-                    path_states.append(self._get_iapws_robust(P=p/10.0, v=pt1.v))
+                result = iapws_isenthalpic_path(pt1.h, pt1.P_bar, pt2.P_bar, num_points)
+                if result is None:
+                    return [pt1, pt2]
+                path = result
             else:
-                P_vals = np.linspace(pt1.P_bar, pt2.P_bar, num_points)
-                h_vals = np.linspace(pt1.h, pt2.h, num_points)
-                for p, h in zip(P_vals, h_vals):
-                    path_states.append(IAPWS97(P=p/10.0, h=h))
-        except:
-            pass
-            
-        if not path_states or len(path_states) < 2:
+                path = iapws_auto_path(pt1, pt2, num_points)
+
+            if path is None or len(path['P']) < 2:
+                return [pt1, pt2]
+
+            # Convert dict-based path to SimplePt list for backward compat
+            class _SimplePt:
+                def __init__(self, P_bar, T_C, h, s, v):
+                    self.P_bar = P_bar
+                    self.T_C = T_C
+                    self.h = h
+                    self.s = s
+                    self.v = v
+                    self.x = None
+                    self.phase = None
+
+            n = len(path['P'])
+            return [_SimplePt(path['P'][i], path['T'][i], path['h'][i],
+                              path['s'][i], path['v'][i]) for i in range(n)]
+        except Exception:
             return [pt1, pt2]
-            
-        class SimplePt:
-            def __init__(self, st):
-                self.P_bar = st.P * 10.0
-                self.T_C = st.T - 273.15
-                self.h = st.h
-                self.s = st.s
-                self.v = st.v
-                self.x = st.x
-                self.phase = st.phase
-        return [SimplePt(st) for st in path_states]
 
     def get_saturation_intersections(self, pt1, pt2):
         dp = pt2.P_bar - pt1.P_bar
@@ -1051,6 +1053,11 @@ class WaterThermoCAD(ctk.CTkFrame):
                         # Ciclo ideale — sempre tratteggiato
                         ideal_color = '#60aaff'
                         ax.plot(path_x, path_y, color=ideal_color, linestyle='--', linewidth=1.8, alpha=0.75, label='Ideale (η=1)' if pt1 == segments_list[0][0] else '')
+
+                        # Direction arrow on ideal path (clockwise for power cycle)
+                        if len(path_x) > 2:
+                            add_direction_arrow(ax, np.array(path_x), np.array(path_y),
+                                                color=ideal_color, size=10, position=0.4)
                         
                         dh = pt2.h - pt1.h
                         dp = pt2.P_bar - pt1.P_bar
@@ -1105,6 +1112,9 @@ class WaterThermoCAD(ctk.CTkFrame):
                                 rx2, ry2 = self.get_xy_for_tab(rp, tab_name)
                                 ax.plot([rx1, rx2], [ry1, ry2], color='#ff5555', linestyle='-', linewidth=2.5, alpha=0.95, label='Reale turbina')
                                 ax.scatter([rx2], [ry2], s=60, c='#ff5555', edgecolors='#cc0000', zorder=5)
+                                # Direction arrow for real turbine
+                                add_direction_arrow(ax, np.array([rx1, rx2]), np.array([ry1, ry2]),
+                                                    color='#ff5555', size=10, position=0.5)
                                 if abs(eta_t_plot - 1.0) > 1e-3:
                                     ax.annotate(f"{pt2.name}' (reale)", (rx2, ry2), textcoords="offset points",
                                                 xytext=(6, -12), ha='left', color='#ff5555', weight='bold', fontsize=8,
@@ -1122,6 +1132,9 @@ class WaterThermoCAD(ctk.CTkFrame):
                                 rx2, ry2 = self.get_xy_for_tab(rp, tab_name)
                                 ax.plot([rx1, rx2], [ry1, ry2], color='#ffaa33', linestyle='-', linewidth=2.5, alpha=0.95, label='Reale pompa')
                                 ax.scatter([rx2], [ry2], s=60, c='#ffaa33', edgecolors='#cc7700', zorder=5)
+                                # Direction arrow for real pump
+                                add_direction_arrow(ax, np.array([rx1, rx2]), np.array([ry1, ry2]),
+                                                    color='#ffaa33', size=10, position=0.5)
                                 if abs(eta_p_plot - 1.0) > 1e-3:
                                     ax.annotate(f"{pt2.name}' (reale)", (rx2, ry2), textcoords="offset points",
                                                 xytext=(6, -12), ha='left', color='#ffaa33', weight='bold', fontsize=8,
