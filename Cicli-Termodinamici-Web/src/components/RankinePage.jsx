@@ -1,27 +1,49 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Flame } from 'lucide-react';
 import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
 import { generateProcessPath } from '../utils/processPath';
-import { Flame } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace, addDomeTrace } from './shared/plotConfig';
+import {
+  plotLayout,
+  plotConfig,
+  addTrace,
+  addDomeTrace,
+  addFillTrace,
+} from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#38BDF8';
-const SEGMENT_COLORS = ['#38BDF8', '#EF4444', '#22D3EE', '#60A5FA'];
-const isFiniteNumber = (value) => Number.isFinite(value);
+const IDEAL_COLOR = '#60A5FA';
+const HEAT_COLOR = '#F97316';
+const COOL_COLOR = '#22D3EE';
+const TURBINE_COLOR = '#EF4444';
+const PUMP_COLOR = '#F59E0B';
+const LOSS_COLOR = '#CBD5E1';
 
-const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, i) => ({
-    x: p.x, y: p.y,
-    text: labels[i] || `${i + 1}`,
-    showarrow: true, arrowhead: 0, arrowsize: 1, arrowwidth: 1.5, arrowcolor: color,
-    ax: 22, ay: -22,
+const isFiniteNumber = (value) => Number.isFinite(value);
+const directSegment = (from, to) => [{ ...from }, { ...to }];
+
+const pointAnnotations = (points, labels, color) =>
+  points.map((point, index) => ({
+    x: point.x,
+    y: point.y,
+    text: labels[index],
+    showarrow: true,
+    arrowhead: 0,
+    arrowsize: 1,
+    arrowwidth: 1.5,
+    arrowcolor: color,
+    ax: 22,
+    ay: -22,
     font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A', bordercolor: color, borderwidth: 1, borderpad: 4,
+    bgcolor: '#0F172A',
+    bordercolor: color,
+    borderwidth: 1,
+    borderpad: 4,
   }));
 
 const RankinePage = () => {
@@ -37,111 +59,299 @@ const RankinePage = () => {
   const schematicRef = useRef(null);
 
   const [inputs, setInputs] = useState({
-    p_high: 100, p_low: 0.1, t_max: 500, eta_t: 0.85, eta_p: 0.85, mass_flow: 1.0,
+    p_high: 100,
+    p_low: 0.1,
+    t_max: 500,
+    eta_t: 0.85,
+    eta_p: 0.85,
+    mass_flow: 1.0,
   });
 
-  const nodeRef = activeTab === 0 ? tsRef : activeTab === 1 ? hsRef : pvRef;
-
   useEffect(() => {
-    const node = nodeRef.current;
-    if (!results || !node) return;
+    const node =
+      activeTab === 0
+        ? tsRef.current
+        : activeTab === 1
+          ? hsRef.current
+          : activeTab === 2
+            ? pvRef.current
+            : null;
 
-    const paths = results.segmentPaths;
+    if (!results || !node) return undefined;
+
+    const realLabels = ['1', '2', '3', '4'];
+
     const renderActivePlot = () => {
-      if (!paths || paths.length !== 4) return;
       if (activeTab === 0) {
         const data = [
-          addDomeTrace(results.dome.s, results.dome.t),
-          ...paths.map((path, k) =>
-            addTrace(path.map(p => p.s), path.map(p => p.t), {
-              name: `Tratto ${k + 1}`,
-              color: SEGMENT_COLORS[k],
-              width: 3,
+          results.dome?.ts?.s?.length
+            ? addFillTrace(results.dome.ts.s, results.dome.ts.t, {
+                fillcolor: 'rgba(56, 189, 248, 0.08)',
+                name: 'Cupola di saturazione',
+              })
+            : null,
+          results.dome?.ts?.s?.length ? addDomeTrace(results.dome.ts.s, results.dome.ts.t) : null,
+          ...results.idealPaths.map((path, index) =>
+            addTrace(path.map((point) => point.s), path.map((point) => point.t), {
+              name: `Ideale ${index + 1}`,
+              color: IDEAL_COLOR,
+              width: 2,
+              dash: 'dash',
               mode: 'lines',
-            })
+            }),
           ),
-          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.t), {
-            name: 'Stati',
+          addTrace(results.actualPaths[0].map((point) => point.s), results.actualPaths[0].map((point) => point.t), {
+            name: 'Pompa reale',
+            color: PUMP_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[1].map((point) => point.s), results.actualPaths[1].map((point) => point.t), {
+            name: 'Caldaia',
+            color: HEAT_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[2].map((point) => point.s), results.actualPaths[2].map((point) => point.t), {
+            name: 'Turbina reale',
+            color: TURBINE_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[3].map((point) => point.s), results.actualPaths[3].map((point) => point.t), {
+            name: 'Condensatore',
+            color: COOL_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          ...results.lossPaths.map((path, index) =>
+            addTrace(path.map((point) => point.s), path.map((point) => point.t), {
+              name: `Scarto ${index + 1}`,
+              color: LOSS_COLOR,
+              width: 1.5,
+              dash: 'dot',
+              mode: 'lines',
+            }),
+          ),
+          addTrace(results.actualPoints.map((point) => point.s), results.actualPoints.map((point) => point.t), {
+            name: 'Stati reali',
             color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(results.idealPoints.map((point) => point.s), results.idealPoints.map((point) => point.t), {
+            name: 'Stati ideali',
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 8,
+          }),
+        ].filter(Boolean);
+
+        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
+        layout.annotations = [
+          ...pointAnnotations(
+            results.actualPoints.map((point) => ({ x: point.s, y: point.t })),
+            realLabels,
+            COLOR,
+          ),
+          ...pointAnnotations(
+            [
+              { x: results.idealPoints[1].s, y: results.idealPoints[1].t },
+              { x: results.idealPoints[3].s, y: results.idealPoints[3].t },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
-        layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.s, y: p.t })),
-          ['1\nSaturaz.', '2\nPompa', '3\nCaldaia', '4\nTurbina'],
-          COLOR
-        );
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 1) {
         const data = [
-          results.domeHs ? addDomeTrace(results.domeHs.s, results.domeHs.h) : null,
-          ...paths.map((path, k) =>
-            addTrace(path.map(p => p.s), path.map(p => p.h), {
-              name: `Tratto ${k + 1}`,
-              color: SEGMENT_COLORS[k],
-              width: 3,
+          results.dome?.hs?.s?.length
+            ? addFillTrace(results.dome.hs.s, results.dome.hs.h, {
+                fillcolor: 'rgba(56, 189, 248, 0.08)',
+                name: 'Cupola di saturazione',
+              })
+            : null,
+          results.dome?.hs?.s?.length ? addDomeTrace(results.dome.hs.s, results.dome.hs.h) : null,
+          ...results.idealPaths.map((path, index) =>
+            addTrace(path.map((point) => point.s), path.map((point) => point.h), {
+              name: `Ideale ${index + 1}`,
+              color: IDEAL_COLOR,
+              width: 2,
+              dash: 'dash',
               mode: 'lines',
-            })
+            }),
           ),
-          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.h), {
-            name: 'Stati',
+          addTrace(results.actualPaths[0].map((point) => point.s), results.actualPaths[0].map((point) => point.h), {
+            name: 'Pompa reale',
+            color: PUMP_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[1].map((point) => point.s), results.actualPaths[1].map((point) => point.h), {
+            name: 'Caldaia',
+            color: HEAT_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[2].map((point) => point.s), results.actualPaths[2].map((point) => point.h), {
+            name: 'Turbina reale',
+            color: TURBINE_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[3].map((point) => point.s), results.actualPaths[3].map((point) => point.h), {
+            name: 'Condensatore',
+            color: COOL_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          ...results.lossPaths.map((path, index) =>
+            addTrace(path.map((point) => point.s), path.map((point) => point.h), {
+              name: `Scarto ${index + 1}`,
+              color: LOSS_COLOR,
+              width: 1.5,
+              dash: 'dot',
+              mode: 'lines',
+            }),
+          ),
+          addTrace(results.actualPoints.map((point) => point.s), results.actualPoints.map((point) => point.h), {
+            name: 'Stati reali',
             color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(results.idealPoints.map((point) => point.s), results.idealPoints.map((point) => point.h), {
+            name: 'Stati ideali',
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 8,
+          }),
         ].filter(Boolean);
-        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
-        layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.s, y: p.h })),
-          ['1', '2', '3', '4'],
-          COLOR
-        );
+
+        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        layout.annotations = [
+          ...pointAnnotations(
+            results.actualPoints.map((point) => ({ x: point.s, y: point.h })),
+            realLabels,
+            COLOR,
+          ),
+          ...pointAnnotations(
+            [
+              { x: results.idealPoints[1].s, y: results.idealPoints[1].h },
+              { x: results.idealPoints[3].s, y: results.idealPoints[3].h },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
+        ];
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 2) {
         const data = [
-          ...paths.map((path, k) =>
-            addTrace(path.map(p => p.v), path.map(p => p.p), {
-              name: `Tratto ${k + 1}`,
-              color: SEGMENT_COLORS[k],
-              width: 3,
+          results.dome?.pv?.v?.length
+            ? addFillTrace(results.dome.pv.v, results.dome.pv.p, {
+                fillcolor: 'rgba(56, 189, 248, 0.08)',
+                name: 'Cupola di saturazione',
+              })
+            : null,
+          results.dome?.pv?.v?.length ? addDomeTrace(results.dome.pv.v, results.dome.pv.p) : null,
+          ...results.idealPaths.map((path, index) =>
+            addTrace(path.map((point) => point.v), path.map((point) => point.p), {
+              name: `Ideale ${index + 1}`,
+              color: IDEAL_COLOR,
+              width: 2,
+              dash: 'dash',
               mode: 'lines',
-            })
+            }),
           ),
-          addTrace(results.allPoints.map(p => p.v), results.allPoints.map(p => p.p), {
-            name: 'Stati',
-            color: '#60A5FA',
+          addTrace(results.actualPaths[0].map((point) => point.v), results.actualPaths[0].map((point) => point.p), {
+            name: 'Pompa reale',
+            color: PUMP_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[1].map((point) => point.v), results.actualPaths[1].map((point) => point.p), {
+            name: 'Caldaia',
+            color: HEAT_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[2].map((point) => point.v), results.actualPaths[2].map((point) => point.p), {
+            name: 'Turbina reale',
+            color: TURBINE_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          addTrace(results.actualPaths[3].map((point) => point.v), results.actualPaths[3].map((point) => point.p), {
+            name: 'Condensatore',
+            color: COOL_COLOR,
+            width: 3,
+            mode: 'lines',
+          }),
+          ...results.lossPaths.map((path, index) =>
+            addTrace(path.map((point) => point.v), path.map((point) => point.p), {
+              name: `Scarto ${index + 1}`,
+              color: LOSS_COLOR,
+              width: 1.5,
+              dash: 'dot',
+              mode: 'lines',
+            }),
+          ),
+          addTrace(results.actualPoints.map((point) => point.v), results.actualPoints.map((point) => point.p), {
+            name: 'Stati reali',
+            color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(results.idealPoints.map((point) => point.v), results.idealPoints.map((point) => point.p), {
+            name: 'Stati ideali',
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 8,
+          }),
+        ].filter(Boolean);
+
+        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log' },
+          yaxis: { type: 'log' },
+        });
+        layout.annotations = [
+          ...pointAnnotations(
+            results.actualPoints.map((point) => ({ x: point.v, y: point.p })),
+            realLabels,
+            COLOR,
+          ),
+          ...pointAnnotations(
+            [
+              { x: results.idealPoints[1].v, y: results.idealPoints[1].p },
+              { x: results.idealPoints[3].v, y: results.idealPoints[3].p },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
         ];
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-        layout.yaxis.type = 'log';
-        layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.v, y: p.p })),
-          ['1', '2', '3', '4'],
-          COLOR
-        );
         renderPlot(node, data, layout, plotConfig);
       }
     };
 
     renderActivePlot();
     return () => cleanupPlot(node);
-  }, [results, activeTab, nodeRef]);
+  }, [activeTab, results]);
 
-  const canCalculate = isFiniteNumber(inputs.p_high)
-    && isFiniteNumber(inputs.p_low)
-    && isFiniteNumber(inputs.t_max)
-    && isFiniteNumber(inputs.eta_t)
-    && isFiniteNumber(inputs.eta_p)
-    && isFiniteNumber(inputs.mass_flow)
-    && inputs.p_high > inputs.p_low
-    && inputs.p_low > 0
-    && inputs.eta_t > 0 && inputs.eta_t <= 1
-    && inputs.eta_p > 0 && inputs.eta_p <= 1
-    && inputs.mass_flow > 0;
+  const canCalculate =
+    isFiniteNumber(inputs.p_high) &&
+    isFiniteNumber(inputs.p_low) &&
+    isFiniteNumber(inputs.t_max) &&
+    isFiniteNumber(inputs.eta_t) &&
+    isFiniteNumber(inputs.eta_p) &&
+    isFiniteNumber(inputs.mass_flow) &&
+    inputs.p_high > inputs.p_low &&
+    inputs.p_low > 0 &&
+    inputs.eta_t > 0 &&
+    inputs.eta_t <= 1 &&
+    inputs.eta_p > 0 &&
+    inputs.eta_p <= 1 &&
+    inputs.mass_flow > 0;
 
   const calculate = async () => {
     setLoading(true);
@@ -149,37 +359,60 @@ const RankinePage = () => {
     try {
       const st1 = await solveFluid({ p: inputs.p_low, q: 0 });
       const st2s = await solveFluid({ p: inputs.p_high, s: st1.s });
-      const h2r = st1.h + (st2s.h - st1.h) / inputs.eta_p;
-      const st2 = await solveFluid({ p: inputs.p_high, h: h2r });
+      const h2 = st1.h + (st2s.h - st1.h) / inputs.eta_p;
+      const st2 = await solveFluid({ p: inputs.p_high, h: h2 });
       const st3 = await solveFluid({ p: inputs.p_high, t: inputs.t_max });
       const st4s = await solveFluid({ p: inputs.p_low, s: st3.s });
-      const h4r = st3.h - (st3.h - st4s.h) * inputs.eta_t;
-      const st4 = await solveFluid({ p: inputs.p_low, h: h4r });
+      const h4 = st3.h - (st3.h - st4s.h) * inputs.eta_t;
+      const st4 = await solveFluid({ p: inputs.p_low, h: h4 });
 
       const wt = st3.h - st4.h;
       const wp = st2.h - st1.h;
-      const q_in = st3.h - st2.h;
-      const w_net = wt - wp;
-      const q_out = q_in - w_net;
+      const qIn = st3.h - st2.h;
+      const wNet = wt - wp;
+      const qOut = qIn - wNet;
 
-      const domeFull = await getSaturationDomeFull();
-      const segmentPaths = await Promise.all([
-        generateProcessPath(st1, st2, 'Water'),
-        generateProcessPath(st2, st3, 'Water'),
-        generateProcessPath(st3, st4, 'Water'),
-        generateProcessPath(st4, st1, 'Water'),
+      const [boilerPath, condenserPath, pumpClosure, turbineClosure, dome] = await Promise.all([
+        generateProcessPath(st2, st3, 'Water', 80),
+        generateProcessPath(st4, st1, 'Water', 80),
+        generateProcessPath(st2, st2s, 'Water', 30),
+        generateProcessPath(st4, st4s, 'Water', 30),
+        getSaturationDomeFull('Water'),
       ]);
 
+      const idealPaths = [
+        generateProcessPath(st1, st2s, 'Water', 56),
+        generateProcessPath(st2s, st3, 'Water', 80),
+        generateProcessPath(st3, st4s, 'Water', 56),
+        generateProcessPath(st4s, st1, 'Water', 80),
+      ];
+
+      const resolvedIdealPaths = await Promise.all(idealPaths);
+
       setResults({
-        allPoints: [st1, st2, st3, st4],
-        segmentPaths,
-        stats: { wt, wp, q_in, q_out, eta: (w_net / q_in) * 100, power: w_net * inputs.mass_flow },
-        dome: domeFull.ts,
-        domeHs: domeFull.hs,
+        actualPoints: [st1, st2, st3, st4],
+        idealPoints: [st1, st2s, st3, st4s],
+        actualPaths: [
+          directSegment(st1, st2),
+          boilerPath,
+          directSegment(st3, st4),
+          condenserPath,
+        ],
+        idealPaths: resolvedIdealPaths,
+        lossPaths: [pumpClosure, turbineClosure],
+        dome,
+        stats: {
+          wt,
+          wp,
+          q_in: qIn,
+          q_out: qOut,
+          eta: (wNet / qIn) * 100,
+          power: wNet * inputs.mass_flow,
+        },
       });
-    } catch (err) {
-      setError('Errore nel calcolo: verificare i parametri di ingresso.');
-      console.error(err);
+    } catch (calculationError) {
+      setError('Errore nel calcolo: verifica che il punto 3 sia coerente con la pressione di caldaia.');
+      console.error(calculationError);
     } finally {
       setLoading(false);
     }
@@ -195,56 +428,115 @@ const RankinePage = () => {
         accentColor: COLOR,
         inputs,
         stats: results.stats,
-        points: results.allPoints.map((p, i) => ({
-          label: ['1: Saturaz.', '2: Pompa', '3: Caldaia', '4: Turbina'][i],
-          t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
+        points: results.actualPoints.map((point, index) => ({
+          label: ['1: Condensatore out', '2: Pompa out reale', '3: Caldaia out', '4: Turbina out reale'][index],
+          t: point.t,
+          p: point.p,
+          h: point.h,
+          s: point.s,
+          v: point.v,
         })),
         formulas: [
-          { label: 'Lavoro Turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
-          { label: 'Lavoro Pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp },
-          { label: 'Calore Ingresso', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
+          { label: 'Lavoro turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
+          { label: 'Lavoro pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp },
+          { label: 'Calore fornito', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
           { label: 'Rendimento', latex: '\\eta = \\frac{w_t - w_p}{q_{in}}', value: results.stats.eta },
-          { label: 'Punto 2 (uscita pompa reale)', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_p}' },
-          { label: 'Punto 4 (uscita turbina reale)', latex: 'h_4 = h_3 - \\eta_t (h_3 - h_{4s})' },
+          { label: 'Pompa reale', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_p}' },
+          { label: 'Turbina reale', latex: 'h_4 = h_3 - \\eta_t (h_3 - h_{4s})' },
         ],
         plotRefs: { ts: tsRef, hs: hsRef, pv: pvRef },
         schematicRef,
       });
-    } catch (err) {
-      console.error('PDF export error:', err);
+    } catch (downloadError) {
+      console.error('PDF export error:', downloadError);
     } finally {
       setDownloadingPDF(false);
     }
-  }, [results, inputs]);
+  }, [inputs, results]);
 
-  const diagramTabs = results ? [
-    { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0),
-      content: <div ref={tsRef} className="plot-area" /> },
-    { id: 'hs', label: 'h-s (Mollier)', active: activeTab === 1, onClick: () => setActiveTab(1),
-      content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'pv', label: 'P-v', active: activeTab === 2, onClick: () => setActiveTab(2),
-      content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3),
-      content: <div ref={schematicRef}><SchematicDiagram type="rankine" accentColor={COLOR} /></div> },
-  ] : null;
+  const diagramTabs = results
+    ? [
+        {
+          id: 'ts',
+          label: 'T-s',
+          active: activeTab === 0,
+          onClick: () => setActiveTab(0),
+          content: <div ref={tsRef} className="plot-area" />,
+        },
+        {
+          id: 'hs',
+          label: 'h-s',
+          active: activeTab === 1,
+          onClick: () => setActiveTab(1),
+          content: <div ref={hsRef} className="plot-area" />,
+        },
+        {
+          id: 'pv',
+          label: 'P-v',
+          active: activeTab === 2,
+          onClick: () => setActiveTab(2),
+          content: <div ref={pvRef} className="plot-area" />,
+        },
+        {
+          id: 'schema',
+          label: 'Schema',
+          active: activeTab === 3,
+          onClick: () => setActiveTab(3),
+          content: (
+            <div ref={schematicRef}>
+              <SchematicDiagram type="rankine" accentColor={COLOR} />
+            </div>
+          ),
+        },
+      ]
+    : null;
 
   const formulasSection = results ? (
     <FormulasSection
       accentColor={COLOR}
-      points={results.allPoints.map((p, i) => ({
-        label: ['1: Sat.', '2: Pompa', '3: Caldaia', '4: Turb.'][i],
-        t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
-      }))}
+      points={[
+        ...results.actualPoints.map((point, index) => ({
+          label: ['1', '2', '3', '4'][index],
+          t: point.t,
+          p: point.p,
+          h: point.h,
+          s: point.s,
+          v: point.v,
+        })),
+        {
+          label: '2s',
+          t: results.idealPoints[1].t,
+          p: results.idealPoints[1].p,
+          h: results.idealPoints[1].h,
+          s: results.idealPoints[1].s,
+          v: results.idealPoints[1].v,
+        },
+        {
+          label: '4s',
+          t: results.idealPoints[3].t,
+          p: results.idealPoints[3].p,
+          h: results.idealPoints[3].h,
+          s: results.idealPoints[3].s,
+          v: results.idealPoints[3].v,
+        },
+      ]}
       formulas={[
-        { label: 'Punto 1 — Uscita condensatore (sat. liquido)', latex: 'P_1 = P_{low}, \\quad x_1 = 0' },
-        { label: 'Punto 2 — Uscita pompa (reale)', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_p}, \\quad s_2 \\approx s_1' },
-        { label: 'Punto 3 — Uscita caldaia', latex: 'P_3 = P_{high}, \\quad T_3 = T_{max}' },
-        { label: 'Punto 4 — Uscita turbina (reale)', latex: 'h_4 = h_3 - \\eta_t(h_3 - h_{4s}), \\quad s_4 \\approx s_3' },
-        { label: 'Lavoro Turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
-        { label: 'Lavoro Pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp },
-        { label: 'Calore Ingresso', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
-        { label: 'Rendimento Ciclo', latex: '\\eta = \\frac{w_t - w_p}{q_{in}} \\times 100', value: results.stats.eta, display: true },
-        { label: 'Potenza Netta', latex: '\\dot{W}_{net} = \\dot{m} \\cdot (w_t - w_p)', value: results.stats.power },
+        { label: 'Punto 1', latex: 'P_1 = P_{low}, \\quad x_1 = 0' },
+        { label: 'Punto 2s', latex: 's_{2s} = s_1, \\quad P_{2s} = P_{high}' },
+        { label: 'Punto 2 reale', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_p}' },
+        { label: 'Punto 3', latex: 'P_3 = P_{high}, \\quad T_3 = T_{max}' },
+        { label: 'Punto 4s', latex: 's_{4s} = s_3, \\quad P_{4s} = P_{low}' },
+        { label: 'Punto 4 reale', latex: 'h_4 = h_3 - \\eta_t (h_3 - h_{4s})' },
+        { label: 'Lavoro turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
+        { label: 'Lavoro pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp },
+        { label: 'Calore fornito', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
+        {
+          label: 'Rendimento ciclo',
+          latex: '\\eta = \\frac{w_t - w_p}{q_{in}} \\times 100',
+          value: results.stats.eta,
+          display: true,
+        },
+        { label: 'Potenza netta', latex: '\\dot{W}_{net} = \\dot{m}(w_t - w_p)', value: results.stats.power },
       ]}
     />
   ) : null;
@@ -252,15 +544,15 @@ const RankinePage = () => {
   const stats = results ? (
     <div className="stats-row">
       <StatCard label="Rendimento" value={`${results.stats.eta.toFixed(2)}%`} accent color={COLOR} />
-      <StatCard label="Potenza Netta" value={`${(results.stats.power / 1000).toFixed(2)} MW`} />
-      <StatCard label="Lavoro Turbina" value={`${results.stats.wt.toFixed(1)} kJ/kg`} />
-      <StatCard label="Calore Fornito" value={`${results.stats.q_in.toFixed(1)} kJ/kg`} />
+      <StatCard label="Potenza netta" value={`${(results.stats.power / 1000).toFixed(2)} MW`} />
+      <StatCard label="Lavoro turbina" value={`${results.stats.wt.toFixed(1)} kJ/kg`} />
+      <StatCard label="Calore fornito" value={`${results.stats.q_in.toFixed(1)} kJ/kg`} />
     </div>
   ) : null;
 
   return (
     <CyclePageLayout
-      badge="Ciclo a Vapore"
+      badge="Ciclo a vapore"
       title="Ciclo"
       titleAccent="Rankine"
       accentColor={COLOR}
@@ -276,17 +568,58 @@ const RankinePage = () => {
       downloadingPDF={downloadingPDF}
       EmptyIcon={Flame}
     >
-      <h3 className="card-title">Parametri di Ingresso</h3>
+      <h3 className="card-title">Parametri di ingresso</h3>
       <div className="inputs-grid">
-        <InputField label="Pressione Caldaia" value={inputs.p_high} onChange={v => setInputs({ ...inputs, p_high: v })} unit="bar" accent={COLOR} />
-        <InputField label="Pressione Condensatore" value={inputs.p_low} onChange={v => setInputs({ ...inputs, p_low: v })} unit="bar" accent={COLOR} />
-        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={v => setInputs({ ...inputs, t_max: v })} unit="°C" accent={COLOR} />
+        <InputField
+          label="Pressione caldaia"
+          value={inputs.p_high}
+          onChange={(value) => setInputs({ ...inputs, p_high: value })}
+          unit="bar"
+          accent={COLOR}
+        />
+        <InputField
+          label="Pressione condensatore"
+          value={inputs.p_low}
+          onChange={(value) => setInputs({ ...inputs, p_low: value })}
+          unit="bar"
+          accent={COLOR}
+        />
+        <InputField
+          label="Temperatura massima"
+          value={inputs.t_max}
+          onChange={(value) => setInputs({ ...inputs, t_max: value })}
+          unit="C"
+          accent={COLOR}
+        />
       </div>
       <div className="inputs-row">
-        <InputField label="η Turbina" value={inputs.eta_t} onChange={v => setInputs({ ...inputs, eta_t: v })} step={0.01} min={0.5} max={1} accent={COLOR} />
-        <InputField label="η Pompa" value={inputs.eta_p} onChange={v => setInputs({ ...inputs, eta_p: v })} step={0.01} min={0.5} max={1} accent={COLOR} />
+        <InputField
+          label="eta turbina"
+          value={inputs.eta_t}
+          onChange={(value) => setInputs({ ...inputs, eta_t: value })}
+          step={0.01}
+          min={0.5}
+          max={1}
+          accent={COLOR}
+        />
+        <InputField
+          label="eta pompa"
+          value={inputs.eta_p}
+          onChange={(value) => setInputs({ ...inputs, eta_p: value })}
+          step={0.01}
+          min={0.5}
+          max={1}
+          accent={COLOR}
+        />
       </div>
-      <InputField label="Portata Massica" value={inputs.mass_flow} onChange={v => setInputs({ ...inputs, mass_flow: v })} unit="kg/s" step={0.1} accent={COLOR} />
+      <InputField
+        label="Portata massica"
+        value={inputs.mass_flow}
+        onChange={(value) => setInputs({ ...inputs, mass_flow: value })}
+        unit="kg/s"
+        step={0.1}
+        accent={COLOR}
+      />
     </CyclePageLayout>
   );
 };
