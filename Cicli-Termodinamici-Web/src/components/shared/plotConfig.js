@@ -1,30 +1,33 @@
 const CP_AIR = 1.005;
 const CV_AIR = 0.718;
 
-export const plotLayout = (xTitle, yTitle, extra = {}) => ({
-  autosize: true,
-  paper_bgcolor: 'rgba(0,0,0,0)',
-  plot_bgcolor: 'rgba(0,0,0,0)',
-  xaxis: {
-    title: xTitle,
-    gridcolor: '#1E293B',
-    color: '#94A3B8',
-    zerolinecolor: '#334155',
-    ...extra.xaxis,
-  },
-  yaxis: {
-    title: yTitle,
-    gridcolor: '#1E293B',
-    color: '#94A3B8',
-    zerolinecolor: '#334155',
-    ...extra.yaxis,
-  },
-  margin: { t: 30, r: 20, b: 50, l: 60 },
-  font: { color: '#E2E8F0', family: 'Inter, system-ui, sans-serif', size: 12 },
-  showlegend: false,
-  hovermode: 'closest',
-  ...extra,
-});
+export const plotLayout = (xTitle, yTitle, extra = {}) => {
+  const { xaxis: extraX, yaxis: extraY, ...rest } = extra;
+  return {
+    autosize: true,
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    xaxis: {
+      title: xTitle,
+      gridcolor: '#1E293B',
+      color: '#94A3B8',
+      zerolinecolor: '#334155',
+      ...extraX,
+    },
+    yaxis: {
+      title: yTitle,
+      gridcolor: '#1E293B',
+      color: '#94A3B8',
+      zerolinecolor: '#334155',
+      ...extraY,
+    },
+    margin: { t: 30, r: 20, b: 50, l: 60 },
+    font: { color: '#E2E8F0', family: 'Inter, system-ui, sans-serif', size: 12 },
+    showlegend: false,
+    hovermode: 'closest',
+    ...rest,
+  };
+};
 
 export const plotConfig = {
   responsive: true,
