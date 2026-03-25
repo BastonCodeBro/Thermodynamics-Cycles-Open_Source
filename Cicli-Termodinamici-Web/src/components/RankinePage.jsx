@@ -13,6 +13,7 @@ import {
   addTrace,
   addDomeTrace,
   addFillTrace,
+  pointAnnotations,
 } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
@@ -26,25 +27,6 @@ const LOSS_COLOR = '#CBD5E1';
 
 const isFiniteNumber = (value) => Number.isFinite(value);
 const directSegment = (from, to) => [{ ...from }, { ...to }];
-
-const pointAnnotations = (points, labels, color) =>
-  points.map((point, index) => ({
-    x: point.x,
-    y: point.y,
-    text: labels[index],
-    showarrow: true,
-    arrowhead: 0,
-    arrowsize: 1,
-    arrowwidth: 1.5,
-    arrowcolor: color,
-    ax: 22,
-    ay: -22,
-    font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A',
-    bordercolor: color,
-    borderwidth: 1,
-    borderpad: 4,
-  }));
 
 const RankinePage = () => {
   const [loading, setLoading] = useState(false);
@@ -306,9 +288,9 @@ const RankinePage = () => {
           }),
         ].filter(Boolean);
 
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log' },
-          yaxis: { type: 'log' },
+        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log', range: [-4, 2] },
+          yaxis: { type: 'log', nticks: 8 },
         });
         layout.annotations = [
           ...pointAnnotations(
@@ -458,7 +440,7 @@ const RankinePage = () => {
             label: 'Rendimento',
             latex: '\\eta = \\frac{w_t - w_p}{q_{in}}',
             value: results.stats.eta,
-            numeric: `((${results.stats.wt.toFixed(2)} - ${results.stats.wp.toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) * 100 = ${results.stats.eta.toFixed(2)} %`,
+            numeric: `((${results.stats.wt.toFixed(2)} - ${results.stats.wp.toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
           },
           {
             label: 'Pompa reale',
@@ -468,7 +450,7 @@ const RankinePage = () => {
           {
             label: 'Turbina reale',
             latex: 'h_4 = h_3 - \\eta_t (h_3 - h_{4s})',
-            numeric: `${results.actualPoints[2].h.toFixed(2)} - ${inputs.eta_t.toFixed(3)} * (${results.actualPoints[2].h.toFixed(2)} - ${results.idealPoints[3].h.toFixed(2)}) = ${results.actualPoints[3].h.toFixed(2)} kJ/kg`,
+            numeric: `${results.actualPoints[2].h.toFixed(2)} - ${inputs.eta_t.toFixed(3)} \u00B7 (${results.actualPoints[2].h.toFixed(2)} - ${results.idealPoints[3].h.toFixed(2)}) = ${results.actualPoints[3].h.toFixed(2)} kJ/kg`,
           },
         ],
         plotRefs: { ts: tsRef, hs: hsRef, pv: pvRef },

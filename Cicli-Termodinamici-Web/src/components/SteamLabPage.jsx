@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Flame } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Flame, Loader2, Download } from 'lucide-react';
 import InputField from './shared/InputField';
 import FormulasSection from './shared/FormulasSection';
 import StatCard from './shared/StatCard';
@@ -156,10 +156,12 @@ const SteamLabPage = () => {
   const [adding, setAdding] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [closeCycle, setCloseCycle] = useState(true);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   const tsRef = useRef(null);
   const hsRef = useRef(null);
   const pvRef = useRef(null);
+  const formulasRef = useRef(null);
 
   const modeSpec = useMemo(
     () => MODE_SPECS.find((entry) => entry.id === mode) ?? MODE_SPECS[0],
@@ -244,11 +246,10 @@ const SteamLabPage = () => {
   }, [closeCycle, points]);
 
   useEffect(() => {
-    const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? hsRef.current : pvRef.current;
-    if (!node || points.length === 0) return undefined;
+    if (points.length === 0) return undefined;
 
-    const renderActivePlot = () => {
-      if (activeTab === 0) {
+    const renderAllPlots = () => {
+      if (tsRef.current) {
         const data = [
           dome?.ts?.s?.length
             ? addFillTrace(dome.ts.s, dome.ts.t, {
@@ -273,8 +274,10 @@ const SteamLabPage = () => {
         ].filter(Boolean);
         const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(points, (point) => point.s, (point) => point.t);
-        renderPlot(node, data, layout, plotConfig);
-      } else if (activeTab === 1) {
+        renderPlot(tsRef.current, data, layout, plotConfig);
+      }
+
+      if (hsRef.current) {
         const data = [
           dome?.hs?.s?.length
             ? addFillTrace(dome.hs.s, dome.hs.h, {
@@ -299,8 +302,10 @@ const SteamLabPage = () => {
         ].filter(Boolean);
         const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(points, (point) => point.s, (point) => point.h);
-        renderPlot(node, data, layout, plotConfig);
-      } else {
+        renderPlot(hsRef.current, data, layout, plotConfig);
+      }
+
+      if (pvRef.current) {
         const data = [
           dome?.pv?.v?.length
             ? addFillTrace(dome.pv.v, dome.pv.p, {
@@ -323,18 +328,22 @@ const SteamLabPage = () => {
             markerSize: 9,
           }),
         ].filter(Boolean);
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log' },
-          yaxis: { type: 'log' },
+        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log', range: [-4, 2] },
+          yaxis: { type: 'log', nticks: 8 },
         });
         layout.annotations = pointAnnotations(points, (point) => point.v, (point) => point.p);
-        renderPlot(node, data, layout, plotConfig);
+        renderPlot(pvRef.current, data, layout, plotConfig);
       }
     };
 
-    renderActivePlot();
-    return () => cleanupPlot(node);
-  }, [activeTab, dome, points, segmentPaths]);
+    renderAllPlots();
+    return () => {
+      cleanupPlot(tsRef.current);
+      cleanupPlot(hsRef.current);
+      cleanupPlot(pvRef.current);
+    };
+  }, [dome, points, segmentPaths]);
 
   const addPoint = async () => {
     setAdding(true);
@@ -395,6 +404,49 @@ const SteamLabPage = () => {
     setSegmentPaths([]);
     setError(null);
   };
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (points.length === 0) return;
+    setDownloadingPDF(true);
+    try {
+      const { exportToPDF } = await import('../utils/pdfExport');
+      await exportToPDF({
+        title: 'Laboratorio Vapore',
+        accentColor: COLOR,
+        inputs: { modalita: mode, punti: points.length, ciclo: closeCycle ? 'Chiuso' : 'Aperto' },
+        stats: {},
+        points: points.map((point) => ({
+          label: point.name,
+          t: point.t,
+          p: point.p,
+          h: point.h,
+          s: point.s,
+          v: point.v,
+        })),
+        formulas: points
+          .filter((point) => point.origin === 'derived')
+          .map((point) => ({
+            label: `${point.name} da ${point.sourcePoint} (${point.transformation})`,
+            latex:
+              point.transformation === 'isobaric'
+                ? 'P = cost'
+                : point.transformation === 'isothermal'
+                  ? 'T = cost'
+                  : point.transformation === 'isochoric'
+                    ? 'v = cost'
+                    : point.transformation === 'isenthalpic'
+                      ? 'h = cost'
+                      : 's = cost',
+          })),
+        plotRefs: { ts: tsRef, hs: hsRef, pv: pvRef },
+        schematicRef: formulasRef,
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  }, [points, mode, closeCycle]);
 
   const stats = points.length > 0 ? (
     <div className="stats-row">
@@ -646,9 +698,15 @@ const SteamLabPage = () => {
                   </button>
                 </div>
                 <div className="diagram-tab-content">
-                  {activeTab === 0 && <div ref={tsRef} className="plot-area" />}
-                  {activeTab === 1 && <div ref={hsRef} className="plot-area" />}
-                  {activeTab === 2 && <div ref={pvRef} className="plot-area" />}
+                  <div className={activeTab === 0 ? 'diagram-panel-active' : 'diagram-panel-hidden'}>
+                    <div ref={tsRef} className="plot-area" />
+                  </div>
+                  <div className={activeTab === 1 ? 'diagram-panel-active' : 'diagram-panel-hidden'}>
+                    <div ref={hsRef} className="plot-area" />
+                  </div>
+                  <div className={activeTab === 2 ? 'diagram-panel-active' : 'diagram-panel-hidden'}>
+                    <div ref={pvRef} className="plot-area" />
+                  </div>
                 </div>
               </div>
               {stats}
@@ -663,7 +721,7 @@ const SteamLabPage = () => {
       </div>
 
       {points.length > 0 && (
-        <div className="formulas-section-wrapper">
+        <div className="formulas-section-wrapper" ref={formulasRef}>
           <FormulasSection
             accentColor={COLOR}
             coordTitle="Punti del laboratorio vapore"
@@ -691,6 +749,20 @@ const SteamLabPage = () => {
                           : 's = cost',
               }))}
           />
+        </div>
+      )}
+
+      {points.length > 0 && (
+        <div className="pdf-download-wrapper">
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloadingPDF}
+            className="btn-primary btn-pdf-download"
+            style={{ background: `linear-gradient(135deg, ${COLOR}, ${COLOR}CC)` }}
+          >
+            {downloadingPDF ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+            {downloadingPDF ? 'Generazione PDF...' : 'Scarica PDF'}
+          </button>
         </div>
       )}
     </section>

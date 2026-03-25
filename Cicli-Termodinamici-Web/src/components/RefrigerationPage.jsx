@@ -7,7 +7,7 @@ import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace, addDomeTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, addDomeTrace, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
 const COLOR = '#10B981';
@@ -22,14 +22,6 @@ const REFRIGERANTS = [
   { id: 'R290', name: 'R290 (Propano)' },
   { id: 'R600a', name: 'R600a (Isobutano)' },
 ];
-
-const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, i) => ({
-    x: p.x, y: p.y, text: labels[i] || `${i + 1}`,
-    showarrow: true, arrowhead: 0, arrowsize: 1, arrowwidth: 1.5, arrowcolor: color,
-    ax: 22, ay: -22, font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A', bordercolor: color, borderwidth: 1, borderpad: 4,
-  }));
 
 const RefrigerationPage = () => {
   const [loading, setLoading] = useState(false);
@@ -58,6 +50,11 @@ const RefrigerationPage = () => {
       if (tsRef.current) {
         const data = [
           addDomeTrace(results.dome.s, results.dome.t),
+          results.idealCompPath ? addTrace(
+            results.idealCompPath.map(p => p.s),
+            results.idealCompPath.map(p => p.t),
+            { name: 'Compressione ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines' },
+          ) : null,
           ...paths.map((path, k) =>
             addTrace(path.map(p => p.s), path.map(p => p.t), {
               name: `Tratto ${k + 1}`,
@@ -67,16 +64,31 @@ const RefrigerationPage = () => {
             })
           ),
           addTrace(pts.map(p => p.s), pts.map(p => p.t), { name: 'Stati', color: COLOR, mode: 'markers', markerSize: 8 }),
+          results.idealPoint2s ? addTrace(
+            [results.idealPoint2s.s], [results.idealPoint2s.t],
+            { name: '2s', color: '#475569', mode: 'markers', markerSize: 7 },
+          ) : null,
+        ].filter(Boolean);
+        const layout = plotLayout('Entropia s (kJ/kg\u00B7K)', 'Temperatura T (\u00B0C)');
+        layout.annotations = [
+          ...pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
+            ['1\nEvap.', '2\nComp.', '3\nCond.', '4\nValv.'], COLOR),
+          ...(results.idealPoint2s ? pointAnnotations(
+            [{ x: results.idealPoint2s.s, y: results.idealPoint2s.t }],
+            ['2s'], '#475569',
+          ) : []),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
-        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
-          ['1\nEvap.', '2\nComp.', '3\nCond.', '4\nValv.'], COLOR);
         renderPlot(tsRef.current, data, layout, plotConfig);
       }
 
       if (phRef.current) {
         const data = [
           results.domePh ? addDomeTrace(results.domePh.h, results.domePh.p) : null,
+          results.idealCompPath ? addTrace(
+            results.idealCompPath.map(p => p.h),
+            results.idealCompPath.map(p => p.p),
+            { name: 'Compressione ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines' },
+          ) : null,
           ...paths.map((path, k) =>
             addTrace(path.map(p => p.h), path.map(p => p.p), {
               name: `Tratto ${k + 1}`,
@@ -86,11 +98,22 @@ const RefrigerationPage = () => {
             })
           ),
           addTrace(pts.map(p => p.h), pts.map(p => p.p), { name: 'Stati', color: '#34D399', mode: 'markers', markerSize: 8 }),
+          results.idealPoint2s ? addTrace(
+            [results.idealPoint2s.h], [results.idealPoint2s.p],
+            { name: '2s', color: '#475569', mode: 'markers', markerSize: 7 },
+          ) : null,
         ].filter(Boolean);
         const layout = plotLayout('Entalpia h (kJ/kg)', 'Pressione P (bar)');
         layout.yaxis.type = 'log';
-        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.h, y: p.p })),
-          ['1', '2', '3', '4'], COLOR);
+        layout.yaxis.nticks = 8;
+        layout.annotations = [
+          ...pointAnnotations(pts.map(p => ({ x: p.h, y: p.p })),
+            ['1', '2', '3', '4'], COLOR),
+          ...(results.idealPoint2s ? pointAnnotations(
+            [{ x: results.idealPoint2s.h, y: results.idealPoint2s.p }],
+            ['2s'], '#475569',
+          ) : []),
+        ];
         renderPlot(phRef.current, data, layout, plotConfig);
       }
     };
@@ -126,16 +149,21 @@ const RefrigerationPage = () => {
       const qlow = st1.h - st4.h;
 
       const domeFull = await getSaturationDomeFull(fluid);
-      const segmentPaths = await Promise.all([
-        generateProcessPath(st1, st2r, fluid),
-        generateProcessPath(st2r, st3, fluid),
-        generateProcessPath(st3, st4, fluid),
-        generateProcessPath(st4, st1, fluid),
+      const [segmentPaths, idealCompPath] = await Promise.all([
+        Promise.all([
+          generateProcessPath(st1, st2r, fluid),
+          generateProcessPath(st2r, st3, fluid),
+          generateProcessPath(st3, st4, fluid),
+          generateProcessPath(st4, st1, fluid),
+        ]),
+        generateProcessPath(st1, st2s, fluid),
       ]);
 
       setResults({
         allPoints: [st1, st2r, st3, st4],
+        idealPoint2s: st2s,
         segmentPaths,
+        idealCompPath,
         stats: { win, qlow, qhigh: st2r.h - st3.h, cop: qlow / win, cop_hp: (st2r.h - st3.h) / win, cooling_cap: qlow * inputs.mass_flow },
         dome: domeFull.ts,
         domePh: domeFull.ph,

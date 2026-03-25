@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatValue } from '../../utils/formatNumber';
 
 const TEXT = '#E2E8F0';
 const MUTED = '#94A3B8';
@@ -6,8 +7,10 @@ const PIPE = '#CBD5E1';
 const PANEL = '#0F172A';
 const CARD = '#111827';
 
-const isFiniteNumber = (value) => Number.isFinite(value);
-const formatValue = (value, digits, unit) => (isFiniteNumber(value) ? `${value.toFixed(digits)} ${unit}` : '-');
+const formatValueUnit = (value, type, unit) => {
+  const formatted = formatValue(value, type);
+  return formatted === '\u2014' ? '-' : `${formatted} ${unit}`;
+};
 
 const FlowArrow = ({ x1, y1, x2, y2, color = PIPE, width = 4, label, labelX, labelY }) => {
   const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -150,19 +153,19 @@ const PointCard = ({ x, y, width, label, point, color }) => {
       <rect width={width} height="92" rx="12" fill={CARD} stroke={`${color}99`} strokeWidth="1.5" />
       <text x={col1} y="18" fill={color} fontSize="12" fontWeight="800">{label}</text>
       <text x={col1} y="38" fill={TEXT} fontSize="10" fontWeight="600">
-        {`P: ${formatValue(point?.p, 3, 'bar')}`}
+        {`P: ${formatValueUnit(point?.p, 'pressure', 'bar')}`}
       </text>
       <text x={col2} y="38" fill={TEXT} fontSize="10" fontWeight="600">
-        {`T: ${formatValue(point?.t, 2, '°C')}`}
+        {`T: ${formatValueUnit(point?.t, 'temperature', '\u00B0C')}`}
       </text>
       <text x={col1} y="54" fill={TEXT} fontSize="10" fontWeight="600">
-        {`h: ${formatValue(point?.h, 2, 'kJ/kg')}`}
+        {`h: ${formatValueUnit(point?.h, 'energy', 'kJ/kg')}`}
       </text>
       <text x={col2} y="54" fill={TEXT} fontSize="10" fontWeight="600">
-        {`s: ${formatValue(point?.s, 4, 'kJ/(kg·K)')}`}
+        {`s: ${formatValueUnit(point?.s, 'entropy', 'kJ/(kg\u00B7K)')}`}
       </text>
       <text x={col1} y="70" fill={TEXT} fontSize="10" fontWeight="600">
-        {`v: ${formatValue(point?.v, 5, 'm³/kg')}`}
+        {`v: ${formatValueUnit(point?.v, 'volume', 'm\u00B3/kg')}`}
       </text>
       <text x={col2} y="70" fill={MUTED} fontSize="9" fontWeight="500">
         {point?.q !== undefined && point?.q >= 0 && point?.q <= 1 ? `x: ${point.q.toFixed(3)}` : ''}

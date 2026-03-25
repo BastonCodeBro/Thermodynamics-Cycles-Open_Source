@@ -5,33 +5,15 @@ import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, clampLogRange, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 import { calcDieselCycle } from '../utils/idealGas';
 import { generateProcessPath } from '../utils/processPath';
 
 const COLOR = '#EF4444';
 const SEGMENT_COLORS = [COLOR, '#F97316', '#22D3EE', '#60A5FA'];
+const IDEAL_COLOR = '#475569';
 const isFiniteNumber = (value) => Number.isFinite(value);
-
-const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, index) => ({
-    x: p.x,
-    y: p.y,
-    text: labels[index] || `${index + 1}`,
-    showarrow: true,
-    arrowhead: 0,
-    arrowsize: 1,
-    arrowwidth: 1.5,
-    arrowcolor: color,
-    ax: 22,
-    ay: -22,
-    font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A',
-    bordercolor: color,
-    borderwidth: 1,
-    borderpad: 4,
-  }));
 
 const DieselPage = () => {
   const [loading, setLoading] = useState(false);
@@ -59,23 +41,48 @@ const DieselPage = () => {
 
     const renderAllPlots = async () => {
       const pts = results.allPoints;
-      const pathOptions = [
+      const idealPts = results.idealPoints;
+
+      const realPathOptions = [
         { processType: 'polytropic', model: 'ideal-gas' },
         { processType: 'isobaric', model: 'ideal-gas' },
         { processType: 'polytropic', model: 'ideal-gas' },
         { processType: 'isochoric', model: 'ideal-gas' },
       ];
 
-      const paths = await Promise.all([
-        generateProcessPath(pts[0], pts[1], 'Air', 64, pathOptions[0]),
-        generateProcessPath(pts[1], pts[2], 'Air', 64, pathOptions[1]),
-        generateProcessPath(pts[2], pts[3], 'Air', 64, pathOptions[2]),
-        generateProcessPath(pts[3], pts[0], 'Air', 64, pathOptions[3]),
+      const idealPathOptions = [
+        { processType: 'isentropic', model: 'ideal-gas' },
+        { processType: 'isobaric', model: 'ideal-gas' },
+        { processType: 'isentropic', model: 'ideal-gas' },
+        { processType: 'isochoric', model: 'ideal-gas' },
+      ];
+
+      const [realPaths, idealPaths] = await Promise.all([
+        Promise.all([
+          generateProcessPath(pts[0], pts[1], 'Air', 64, realPathOptions[0]),
+          generateProcessPath(pts[1], pts[2], 'Air', 64, realPathOptions[1]),
+          generateProcessPath(pts[2], pts[3], 'Air', 64, realPathOptions[2]),
+          generateProcessPath(pts[3], pts[0], 'Air', 64, realPathOptions[3]),
+        ]),
+        Promise.all([
+          generateProcessPath(idealPts[0], idealPts[1], 'Air', 64, idealPathOptions[0]),
+          generateProcessPath(idealPts[1], idealPts[2], 'Air', 64, idealPathOptions[1]),
+          generateProcessPath(idealPts[2], idealPts[3], 'Air', 64, idealPathOptions[2]),
+          generateProcessPath(idealPts[3], idealPts[0], 'Air', 64, idealPathOptions[3]),
+        ]),
       ]);
+
+      const addIdealTraces = (mapperX, mapperY) =>
+        idealPaths.map((path) => addTrace(path.map(mapperX), path.map(mapperY), {
+          color: IDEAL_COLOR,
+          width: 2,
+          dash: 'dash',
+          mode: 'lines',
+        }));
 
       if (tsRef.current) {
         const data = [
-          ...paths.map((path, index) =>
+          ...realPaths.map((path, index) =>
             addTrace(path.map((p) => p.s), path.map((p) => p.t), {
               name: `Tratto ${index + 1}`,
               color: SEGMENT_COLORS[index],
@@ -83,24 +90,40 @@ const DieselPage = () => {
               mode: 'lines',
             }),
           ),
+          ...addIdealTraces((p) => p.s, (p) => p.t),
           addTrace(pts.map((p) => p.s), pts.map((p) => p.t), {
             color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(idealPts.map((p) => p.s), idealPts.map((p) => p.t), {
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 7,
+          }),
         ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
-        layout.annotations = pointAnnotations(
-          pts.map((p) => ({ x: p.s, y: p.t })),
-          ['1\nInizio', '2\nCompressione', '3\nCombustione', '4\nEspansione'],
-          COLOR,
-        );
+        const layout = plotLayout('Entropia s (kJ/(kg\u00B7K))', 'Temperatura T (\u00B0C)');
+        layout.annotations = [
+          ...pointAnnotations(
+            pts.map((p) => ({ x: p.s, y: p.t })),
+            ['1\nInizio', '2\nCompressione', '3\nCombustione', '4\nEspansione'],
+            COLOR,
+          ),
+          ...pointAnnotations(
+            [
+              { x: idealPts[1].s, y: idealPts[1].t },
+              { x: idealPts[3].s, y: idealPts[3].t },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
+        ];
         renderPlot(tsRef.current, data, layout, plotConfig);
       }
 
       if (pvRef.current) {
-        const data = [
-          ...paths.map((path, index) =>
+        const pvData = [
+          ...realPaths.map((path, index) =>
             addTrace(path.map((p) => p.v), path.map((p) => p.p), {
               name: `Tratto ${index + 1}`,
               color: SEGMENT_COLORS[index],
@@ -108,23 +131,41 @@ const DieselPage = () => {
               mode: 'lines',
             }),
           ),
+          ...addIdealTraces((p) => p.v, (p) => p.p),
           addTrace(pts.map((p) => p.v), pts.map((p) => p.p), {
             color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(idealPts.map((p) => p.v), idealPts.map((p) => p.p), {
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 7,
+          }),
         ];
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log' },
-          yaxis: { type: 'log' },
+        const allV = pvData.flatMap((t) => t.x);
+        const allP = pvData.flatMap((t) => t.y);
+        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log', range: clampLogRange(allV, { minMag: -3, maxMag: 2 }) },
+          yaxis: { type: 'log', range: clampLogRange(allP, { minMag: -1, maxMag: 3 }) },
         });
-        layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(pvRef.current, data, layout, plotConfig);
+        layout.annotations = [
+          ...pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR),
+          ...pointAnnotations(
+            [
+              { x: idealPts[1].v, y: idealPts[1].p },
+              { x: idealPts[3].v, y: idealPts[3].p },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
+        ];
+        renderPlot(pvRef.current, pvData, layout, plotConfig);
       }
 
       if (hsRef.current) {
         const data = [
-          ...paths.map((path, index) =>
+          ...realPaths.map((path, index) =>
             addTrace(path.map((p) => p.s), path.map((p) => p.h), {
               name: `Tratto ${index + 1}`,
               color: SEGMENT_COLORS[index],
@@ -132,14 +173,30 @@ const DieselPage = () => {
               mode: 'lines',
             }),
           ),
+          ...addIdealTraces((p) => p.s, (p) => p.h),
           addTrace(pts.map((p) => p.s), pts.map((p) => p.h), {
             color: COLOR,
             mode: 'markers',
             markerSize: 10,
           }),
+          addTrace(idealPts.map((p) => p.s), idealPts.map((p) => p.h), {
+            color: IDEAL_COLOR,
+            mode: 'markers',
+            markerSize: 7,
+          }),
         ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
-        layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
+        const layout = plotLayout('Entropia s (kJ/(kg\u00B7K))', 'Entalpia h (kJ/kg)');
+        layout.annotations = [
+          ...pointAnnotations(pts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR),
+          ...pointAnnotations(
+            [
+              { x: idealPts[1].s, y: idealPts[1].h },
+              { x: idealPts[3].s, y: idealPts[3].h },
+            ],
+            ['2s', '4s'],
+            IDEAL_COLOR,
+          ),
+        ];
         renderPlot(hsRef.current, data, layout, plotConfig);
       }
     };
@@ -180,6 +237,7 @@ const DieselPage = () => {
 
       setResults({
         allPoints: cycle.points,
+        idealPoints: cycle.idealPoints,
         stats: cycle.stats,
       });
     } catch (calculationError) {
@@ -213,7 +271,7 @@ const DieselPage = () => {
             label: 'Rendimento ideale Diesel',
             latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}',
             value: results.stats.eta_ideal,
-            numeric: `(1 - (1 / ${inputs.r.toFixed(3)}^(1.4 - 1)) * ((${inputs.rc.toFixed(3)}^1.4 - 1) / (1.4 * (${inputs.rc.toFixed(3)} - 1)))) * 100 = ${results.stats.eta_ideal.toFixed(2)} %`,
+            numeric: `(1 - (1 / ${inputs.r.toFixed(3)}^(1.4 - 1)) \u00B7 ((${inputs.rc.toFixed(3)}^1.4 - 1) / (1.4 \u00B7 (${inputs.rc.toFixed(3)} - 1)))) \u00D7 100 = ${results.stats.eta_ideal.toFixed(2)} %`,
           },
           {
             label: 'Lavoro netto',
@@ -225,7 +283,7 @@ const DieselPage = () => {
             label: 'Rendimento reale',
             latex: '\\eta = \\frac{w_{net}}{q_{in}}',
             value: results.stats.eta,
-            numeric: `((${(results.stats.q_in - results.stats.q_out).toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) * 100 = ${results.stats.eta.toFixed(2)} %`,
+            numeric: `((${(results.stats.q_in - results.stats.q_out).toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
           },
         ],
         plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },

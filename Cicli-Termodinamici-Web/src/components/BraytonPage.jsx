@@ -5,7 +5,7 @@ import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, clampLogRange, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 import { calcBraytonCycle } from '../utils/idealGas';
 import { generateProcessPath } from '../utils/processPath';
@@ -14,25 +14,6 @@ const COLOR = '#818CF8';
 const SEGMENT_COLORS = [COLOR, '#F97316', '#22D3EE', '#60A5FA'];
 const IDEAL_COLOR = '#475569';
 const isFiniteNumber = (value) => Number.isFinite(value);
-
-const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, index) => ({
-    x: p.x,
-    y: p.y,
-    text: labels[index] || `${index + 1}`,
-    showarrow: true,
-    arrowhead: 0,
-    arrowsize: 1,
-    arrowwidth: 1.5,
-    arrowcolor: color,
-    ax: 22,
-    ay: -22,
-    font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A',
-    bordercolor: color,
-    borderwidth: 1,
-    borderpad: 4,
-  }));
 
 const BraytonPage = () => {
   const [loading, setLoading] = useState(false);
@@ -127,7 +108,7 @@ const BraytonPage = () => {
       }
 
       if (pvRef.current) {
-        const data = [
+        const pvData = [
           ...realPaths.map((path, index) =>
             addTrace(path.map((p) => p.v), path.map((p) => p.p), {
               name: `Tratto ${index + 1}`,
@@ -143,12 +124,14 @@ const BraytonPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log' },
-          yaxis: { type: 'log' },
+        const allV = pvData.flatMap((t) => t.x);
+        const allP = pvData.flatMap((t) => t.y);
+        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log', range: clampLogRange(allV, { minMag: -3, maxMag: 2 }) },
+          yaxis: { type: 'log', range: clampLogRange(allP, { minMag: -1, maxMag: 3 }) },
         });
         layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(pvRef.current, data, layout, plotConfig);
+        renderPlot(pvRef.current, pvData, layout, plotConfig);
       }
 
       if (hsRef.current) {
@@ -249,31 +232,31 @@ const BraytonPage = () => {
             label: 'Lavoro compressore',
             latex: 'w_c = c_p (T_2 - T_1)',
             value: results.stats.wc,
-            numeric: `1.005 * (${results.allPoints[1].t.toFixed(2)} - ${results.allPoints[0].t.toFixed(2)}) = ${results.stats.wc.toFixed(2)} kJ/kg`,
+            numeric: `1.005 \u00B7 (${results.allPoints[1].t.toFixed(2)} - ${results.allPoints[0].t.toFixed(2)}) = ${results.stats.wc.toFixed(2)} kJ/kg`,
           },
           {
             label: 'Lavoro turbina',
             latex: 'w_t = c_p (T_3 - T_4)',
             value: results.stats.wt,
-            numeric: `1.005 * (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[3].t.toFixed(2)}) = ${results.stats.wt.toFixed(2)} kJ/kg`,
+            numeric: `1.005 \u00B7 (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[3].t.toFixed(2)}) = ${results.stats.wt.toFixed(2)} kJ/kg`,
           },
           {
             label: 'Calore in ingresso',
             latex: 'q_{in} = c_p (T_3 - T_2)',
             value: results.stats.q_in,
-            numeric: `1.005 * (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[1].t.toFixed(2)}) = ${results.stats.q_in.toFixed(2)} kJ/kg`,
+            numeric: `1.005 \u00B7 (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[1].t.toFixed(2)}) = ${results.stats.q_in.toFixed(2)} kJ/kg`,
           },
           {
             label: 'Back work ratio',
             latex: 'BWR = \\frac{w_c}{w_t}',
             value: results.stats.bwr,
-            numeric: `${results.stats.wc.toFixed(2)} / ${results.stats.wt.toFixed(2)} * 100 = ${results.stats.bwr.toFixed(2)} %`,
+            numeric: `${results.stats.wc.toFixed(2)} / ${results.stats.wt.toFixed(2)} \u00D7 100 = ${results.stats.bwr.toFixed(2)} %`,
           },
           {
             label: 'Rendimento reale',
             latex: '\\eta = \\frac{w_t - w_c}{q_{in}}',
             value: results.stats.eta,
-            numeric: `((${results.stats.wt.toFixed(2)} - ${results.stats.wc.toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) * 100 = ${results.stats.eta.toFixed(2)} %`,
+            numeric: `((${results.stats.wt.toFixed(2)} - ${results.stats.wc.toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
           },
         ],
         plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },

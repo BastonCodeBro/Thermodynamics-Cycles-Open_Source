@@ -1,3 +1,5 @@
+import { formatValue } from './formatNumber';
+
 let jsPdfPromise = null;
 let html2CanvasPromise = null;
 
@@ -142,7 +144,7 @@ export const exportToPDF = async ({
     try {
       return await html2canvas(ref.current, {
         backgroundColor: '#0B1120',
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
       });
@@ -274,20 +276,7 @@ export const exportToPDF = async ({
         pdf.setFont('helvetica', 'normal');
       }
 
-      const text = formula.latex
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
-        .replace(/\\cdot/g, '*')
-        .replace(/\\Delta/g, 'Delta')
-        .replace(/\\eta/g, 'eta')
-        .replace(/\\alpha/g, 'alpha')
-        .replace(/\\beta/g, 'beta')
-        .replace(/\\gamma/g, 'gamma')
-        .replace(/\\theta/g, 'theta')
-        .replace(/\\pi/g, 'pi')
-        .replace(/\\sigma/g, 'sigma')
-        .replace(/\\infty/g, 'infinity')
-        .replace(/\\left|\\right/g, '')
-        .replace(/[{}\\]/g, '');
+      const text = latexToPlain(formula.latex);
       const valueText = formula.value !== undefined
         ? ` = ${typeof formula.value === 'number' ? formula.value.toFixed(2) : formula.value}`
         : '';
@@ -308,6 +297,30 @@ export const exportToPDF = async ({
   pdf.save(`Ciclo_${title.replace(/\s+/g, '_')}_ThermoHub.pdf`);
 };
 
+function latexToPlain(latex) {
+  return latex
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+    .replace(/\\cdot/g, '\u00B7')
+    .replace(/\\times/g, '\u00D7')
+    .replace(/\\Delta/g, '\u0394')
+    .replace(/\\eta/g, '\u03B7')
+    .replace(/\\alpha/g, '\u03B1')
+    .replace(/\\beta/g, '\u03B2')
+    .replace(/\\gamma/g, '\u03B3')
+    .replace(/\\theta/g, '\u03B8')
+    .replace(/\\pi/g, '\u03C0')
+    .replace(/\\sigma/g, '\u03C3')
+    .replace(/\\infty/g, '\u221E')
+    .replace(/\\dot\{([^}]+)\}/g, '$1\u0307')
+    .replace(/\\left|\\right/g, '')
+    .replace(/\\quad/g, '  ')
+    .replace(/\\,/g, ' ')
+    .replace(/_\{([^}]+)\}/g, '_$1')
+    .replace(/\^\{([^}]+)\}/g, '^$1')
+    .replace(/[{}]/g, '')
+    .replace(/\\/g, '');
+}
+
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
@@ -316,12 +329,5 @@ function hexToRgb(hex) {
 }
 
 function fmtPDF(value) {
-  if (value === undefined || value === null || !Number.isFinite(value)) return '-';
-  const a = Math.abs(value);
-  if (a >= 1000) return value.toFixed(1);
-  if (a >= 100) return value.toFixed(2);
-  if (a >= 1) return value.toFixed(3);
-  if (a >= 0.01) return value.toFixed(4);
-  if (a >= 0.001) return value.toFixed(5);
-  return value.toFixed(6);
+  return formatValue(value, 'generic');
 }

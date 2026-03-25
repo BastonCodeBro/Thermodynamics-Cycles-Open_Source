@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { formatValue } from '../../utils/formatNumber';
 
 const KaTeX = ({ math, display = false, color }) => {
   const ref = useRef(null);
@@ -29,18 +30,8 @@ const KaTeX = ({ math, display = false, color }) => {
 const FormulasSection = ({ points, formulas, coordTitle = 'Coordinate Termodinamiche', accentColor = '#38BDF8' }) => {
   if (!points || points.length === 0) return null;
 
-  const headers = ['Punto', 'T (°C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/(kg·K))', 'v (m³/kg)'];
-  const fmt = (v) => {
-    if (v === undefined || v === null || !Number.isFinite(v)) return '—';
-    const a = Math.abs(v);
-    if (a >= 1000) return v.toFixed(1);
-    if (a >= 100) return v.toFixed(2);
-    if (a >= 10) return v.toFixed(3);
-    if (a >= 1) return v.toFixed(4);
-    if (a >= 0.01) return v.toFixed(4);
-    if (a >= 0.001) return v.toFixed(5);
-    return v.toFixed(6);
-  };
+  const headers = ['Punto', 'T (\u00B0C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/(kg\u00B7K))', 'v (m\u00B3/kg)'];
+  const fmt = (v) => formatValue(v, 'generic');
 
   return (
     <div className="formulas-section glass">
@@ -84,7 +75,7 @@ const FormulasSection = ({ points, formulas, coordTitle = 'Coordinate Termodinam
                 {f.value !== undefined && (
                   <span className="formula-value">
                     {' = '}
-                    {typeof f.value === 'number' ? f.value.toFixed(2) : f.value}
+                    {typeof f.value === 'number' ? formatValue(f.value, 'energy') : f.value}
                     {f.unit && ` ${f.unit}`}
                   </span>
                 )}

@@ -5,7 +5,7 @@ import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace, clampLogRange, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 import { calcCarnotCycle } from '../utils/idealGas';
 import { generateProcessPath } from '../utils/processPath';
@@ -13,25 +13,6 @@ import { generateProcessPath } from '../utils/processPath';
 const COLOR = '#A78BFA';
 const SEGMENT_COLORS = [COLOR, '#EF4444', '#22D3EE', '#60A5FA'];
 const isFiniteNumber = (value) => Number.isFinite(value);
-
-const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, index) => ({
-    x: p.x,
-    y: p.y,
-    text: labels[index] || `${index + 1}`,
-    showarrow: true,
-    arrowhead: 0,
-    arrowsize: 1,
-    arrowwidth: 1.5,
-    arrowcolor: color,
-    ax: 22,
-    ay: -22,
-    font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A',
-    bordercolor: color,
-    borderwidth: 1,
-    borderpad: 4,
-  }));
 
 const CarnotPage = () => {
   const [loading, setLoading] = useState(false);
@@ -97,7 +78,7 @@ const CarnotPage = () => {
       }
 
       if (pvRef.current) {
-        const data = [
+        const pvData = [
           ...paths.map((path, index) =>
             addTrace(path.map((p) => p.v), path.map((p) => p.p), {
               name: `Tratto ${index + 1}`,
@@ -112,12 +93,14 @@ const CarnotPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log' },
-          yaxis: { type: 'log' },
+        const allV = pvData.flatMap((t) => t.x);
+        const allP = pvData.flatMap((t) => t.y);
+        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log', range: clampLogRange(allV, { minMag: -3, maxMag: 2 }) },
+          yaxis: { type: 'log', range: clampLogRange(allP, { minMag: -1, maxMag: 3 }) },
         });
         layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(pvRef.current, data, layout, plotConfig);
+        renderPlot(pvRef.current, pvData, layout, plotConfig);
       }
 
       if (hsRef.current) {
@@ -204,13 +187,13 @@ const CarnotPage = () => {
             label: 'Calore assorbito',
             latex: 'Q_{in} = T_H \\cdot \\Delta s',
             value: results.stats.Q_in,
-            numeric: `${(inputs.t_high + 273.15).toFixed(2)} * ${results.stats.ds.toFixed(4)} = ${results.stats.Q_in.toFixed(2)} kJ/kg`,
+            numeric: `${(inputs.t_high + 273.15).toFixed(2)} \u00B7 ${results.stats.ds.toFixed(4)} = ${results.stats.Q_in.toFixed(2)} kJ/kg`,
           },
           {
             label: 'Calore ceduto',
             latex: 'Q_{out} = T_L \\cdot \\Delta s',
             value: results.stats.Q_out,
-            numeric: `${(inputs.t_low + 273.15).toFixed(2)} * ${results.stats.ds.toFixed(4)} = ${results.stats.Q_out.toFixed(2)} kJ/kg`,
+            numeric: `${(inputs.t_low + 273.15).toFixed(2)} \u00B7 ${results.stats.ds.toFixed(4)} = ${results.stats.Q_out.toFixed(2)} kJ/kg`,
           },
           {
             label: 'Lavoro netto',
@@ -222,7 +205,7 @@ const CarnotPage = () => {
             label: 'Rendimento Carnot',
             latex: '\\eta = 1 - \\frac{T_L}{T_H}',
             value: results.stats.eta,
-            numeric: `(1 - ${(inputs.t_low + 273.15).toFixed(2)} / ${(inputs.t_high + 273.15).toFixed(2)}) * 100 = ${results.stats.eta.toFixed(2)} %`,
+            numeric: `(1 - ${(inputs.t_low + 273.15).toFixed(2)} / ${(inputs.t_high + 273.15).toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
           },
         ],
         plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },

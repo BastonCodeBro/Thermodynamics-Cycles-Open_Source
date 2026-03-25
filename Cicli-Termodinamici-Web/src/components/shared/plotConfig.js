@@ -5,9 +5,10 @@ export const plotLayout = (xTitle, yTitle, extra = {}) => {
   const { xaxis: extraX, yaxis: extraY, ...rest } = extra;
   const logTickDefaults = {
     dtick: 1,
-    tickformat: '.1e',
-    exponentformat: 'e',
+    tickformat: '',
+    exponentformat: 'power',
     showexponent: 'all',
+    nticks: 8,
   };
   return {
     autosize: true,
@@ -145,3 +146,40 @@ export const genPhCurveReal = (pt1, pt2, n = 48) => ({
   x: linspace(pt1.h, pt2.h, n),
   y: linspace(pt1.p, pt2.p, n),
 });
+
+const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+export const clampLogRange = (values, { minMag = -3, maxMag = 2, pad = 0.5 } = {}) => {
+  const finite = values.filter((v) => Number.isFinite(v) && v > 0);
+  if (finite.length === 0) return [Math.pow(10, minMag), Math.pow(10, maxMag)];
+  const logMin = Math.log10(Math.min(...finite));
+  const logMax = Math.log10(Math.max(...finite));
+  const lo = clamp(logMin - pad, minMag, maxMag);
+  const hi = clamp(logMax + pad, minMag, maxMag);
+  return [lo, hi];
+};
+
+const ANNOTATION_OFFSETS = [
+  { ax: 30, ay: -28 },
+  { ax: -30, ay: -28 },
+  { ax: 30, ay: 28 },
+  { ax: -30, ay: 28 },
+];
+
+export const pointAnnotations = (pts, labels, color) =>
+  pts.map((p, index) => ({
+    x: p.x,
+    y: p.y,
+    text: labels[index] || `${index + 1}`,
+    showarrow: true,
+    arrowhead: 0,
+    arrowsize: 1,
+    arrowwidth: 1.5,
+    arrowcolor: color,
+    ...ANNOTATION_OFFSETS[index % ANNOTATION_OFFSETS.length],
+    font: { color, size: 13, family: 'Inter' },
+    bgcolor: '#0F172A',
+    bordercolor: color,
+    borderwidth: 1,
+    borderpad: 4,
+  }));

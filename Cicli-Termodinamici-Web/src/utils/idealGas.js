@@ -234,8 +234,11 @@ export function calcOttoCycle({
   const qOut = cv * (t4K - t1K);
   const wNet = qIn - qOut;
 
+  const ideal = (eta === 1) ? { points: [p1, p2r, p3r, p4r] } : calcOttoCycle({ p1Bar, t1C, r, t3C, eta: 1, k, cv, massFlow });
+
   return {
     points: [p1, p2r, p3r, p4r],
+    idealPoints: ideal.points,
     stats: {
       wc: cv * (t2K - t1K),
       wt: cv * (t3K - t4K),
@@ -287,8 +290,11 @@ export function calcDieselCycle({
   const qOut = cv * (t4K - t1K);
   const wNet = qIn - qOut;
 
+  const ideal = (eta === 1) ? { points: [p1, p2r, p3r, p4r] } : calcDieselCycle({ p1Bar, t1C, r, rc, eta: 1, k, cv, massFlow });
+
   return {
     points: [p1, p2r, p3r, p4r],
+    idealPoints: ideal.points,
     stats: {
       wc: cv * (t2K - t1K),
       wt: wNet + cv * (t2K - t1K),
