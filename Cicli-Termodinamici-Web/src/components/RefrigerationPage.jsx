@@ -157,10 +157,21 @@ const RefrigerationPage = () => {
     finally { setDownloadingPDF(false); }
   }, [results, inputs]);
 
+  const schematicProps = results ? {
+    points: results.allPoints,
+    pointLabels: ['1 Uscita evaporatore', '2 Uscita compressore', '3 Uscita condensatore', '4 Uscita valvola'],
+    summaryItems: [
+      { label: 'Lavoro compressore', value: `${results.stats.win.toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Calore utile QL', value: `${results.stats.qlow.toFixed(1)} kJ/kg`, color: '#38BDF8' },
+      { label: 'Calore alto QH', value: `${results.stats.qhigh.toFixed(1)} kJ/kg`, color: '#F87171' },
+      { label: 'COP', value: `${results.stats.cop.toFixed(2)}`, color: COLOR },
+    ],
+  } : null;
+
   const diagramTabs = results ? [
     { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
     { id: 'ph', label: 'P-h', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={phRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={schematicRef}><SchematicDiagram type="refrigeration" accentColor={COLOR} /></div> },
+    { id: 'schema', label: 'Schema', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={schematicRef}><SchematicDiagram type="refrigeration" accentColor={COLOR} {...schematicProps} /></div> },
   ] : null;
 
   const formulasSection = results ? (

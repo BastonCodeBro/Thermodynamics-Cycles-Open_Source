@@ -216,11 +216,22 @@ const DieselPage = () => {
     }
   }, [results, inputs]);
 
+  const schematicProps = results ? {
+    points: results.allPoints,
+    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
+    summaryItems: [
+      { label: 'Lavoro netto', value: `${(results.stats.q_in - results.stats.q_out).toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Calore in', value: `${results.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
+      { label: 'Calore out', value: `${results.stats.q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+      { label: 'Rendimento', value: `${results.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+  } : null;
+
   const diagramTabs = results ? [
     { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
     { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
     { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="diesel" accentColor={COLOR} /></div> },
+    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="diesel" accentColor={COLOR} {...schematicProps} /></div> },
   ] : null;
 
   const formulasSection = results ? (

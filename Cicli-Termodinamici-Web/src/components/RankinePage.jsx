@@ -454,6 +454,18 @@ const RankinePage = () => {
     }
   }, [inputs, results]);
 
+  const schematicProps = results ? {
+    points: results.actualPoints,
+    pointLabels: ['1 Uscita condensatore', '2 Uscita pompa', '3 Uscita caldaia', '4 Uscita turbina'],
+    summaryItems: [
+      { label: 'Lavoro pompa', value: `${results.stats.wp.toFixed(1)} kJ/kg`, color: PUMP_COLOR },
+      { label: 'Lavoro turbina', value: `${results.stats.wt.toFixed(1)} kJ/kg`, color: TURBINE_COLOR },
+      { label: 'Calore in', value: `${results.stats.q_in.toFixed(1)} kJ/kg`, color: HEAT_COLOR },
+      { label: 'Calore out', value: `${results.stats.q_out.toFixed(1)} kJ/kg`, color: COOL_COLOR },
+      { label: 'Rendimento', value: `${results.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+  } : null;
+
   const diagramTabs = results
     ? [
         {
@@ -484,7 +496,7 @@ const RankinePage = () => {
           onClick: () => setActiveTab(3),
           content: (
             <div ref={schematicRef}>
-              <SchematicDiagram type="rankine" accentColor={COLOR} />
+              <SchematicDiagram type="rankine" accentColor={COLOR} {...schematicProps} />
             </div>
           ),
         },

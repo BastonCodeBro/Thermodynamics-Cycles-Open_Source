@@ -208,11 +208,22 @@ const CarnotPage = () => {
     }
   }, [results, inputs]);
 
+  const schematicProps = results ? {
+    points: results.allPoints,
+    pointLabels: ['1 Isoterma TH', '2 Fine espansione', '3 Isoterma TL', '4 Fine compressione'],
+    summaryItems: [
+      { label: 'Q in', value: `${results.stats.Q_in.toFixed(1)} kJ/kg`, color: '#EF4444' },
+      { label: 'Q out', value: `${results.stats.Q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+      { label: 'Lavoro netto', value: `${results.stats.W_net.toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Rendimento', value: `${results.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+  } : null;
+
   const diagramTabs = results ? [
     { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
     { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
     { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="carnot" accentColor={COLOR} /></div> },
+    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="carnot" accentColor={COLOR} {...schematicProps} /></div> },
   ] : null;
 
   const formulasSection = results ? (
