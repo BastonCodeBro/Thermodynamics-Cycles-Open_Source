@@ -1,0 +1,53 @@
+Pag.  1/1 Sessione ordinaria 2019  
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’Istruzione, dell’ Università e della Ricerca 
+ 
+ 
+ESAME DI STATO DI ISTRUZIONE SECONDARIA SUPERIORE 
+Indirizzo: ITCI – TRASPORTI E LOGISTICA 
+ARTICOLAZIONE CONDUZIONE DEL MEZZO 
+OPZIONE APPARATI E IMPIANTI MARITTIMI 
+ 
+Tema di: MECCANICA E MACCHINE 
+Il candidato svolga il tema indicato nella prima parte e risponda a due soli quesiti tra i quattro proposti 
+nella seconda parte 
+PRIMA PARTE 
+Una nave da crociera, di dislocamento pari a 28.000 t, è propulsa con un impianto di tipologia 
+tradizionale con motori diesel di potenza complessiva pari a 35.000 kW. 
+Il candidato, dopo aver scelto con giustificato criterio altri parametri occorrenti, determini: 
+ numero e disposizione dei motori di propulsione; 
+ dimensionamento dei motori di propulsione; 
+ la portata massima di acqua calda per usi igienico -sanitari che è possibile produrre con il recupero 
+di calore dai gas di scarico dei motori; 
+ il consumo orario di combustibile alla massima potenza di propulsione; 
+ il rendimento termico effettivo dei motori diesel di propulsione. 
+Si disegni inoltre uno schema dell'impianto di propulsione indicando le principali apparecchiature 
+necessarie per il trasferimento della potenza dai motori alle eliche. 
+ 
+SECONDA PARTE 
+1) Si descriva il processo di inertizzazione delle cister ne di una nave petroliera indicando le fasi  
+operative necessarie da rappresentare su un diagramma di infiammabilità. Si indichino inoltre le 
+apparecchiature principali che costituiscono l'impianto e si rappresenti lo stesso con un disegno 
+schematico. 
+2) Si descriva un tipico impianto oleodinamico di azionamento di una timoneria per nave petroliera 
+VLCC, individuando i componenti principali e di riserva e i relativi dispositivi accessori, a partire 
+dall'energia primaria di azionamento dell'impianto fino agli attuatori finali.  
+3) Si descriva una unità di trattamento aria (UTA) per la climatizzazione navale indicando le funzioni 
+che la stessa deve svolgere e rappresentando le trasformazioni dell'aria umida sia nel trattamento 
+estivo sia nel trattamento inver nale su un diagramma psicrometrico. Si disegni, inoltre, 
+schematicamente, la macchina con le sezioni necessarie per ottenere le trasformazioni indicate. 
+4) Con particolare riferimento al settore navale, si descriva il processo di estinzione incendi 
+individuando, a partire dalle varie classi di incendio, i più idonei agenti estinguenti e gli impianti 
+fissi e le apparecchiature mobili adatti per la distribuzione degli stessi; si integri inoltre la 
+descrizione con schemi, disegni e procedure per l'utilizzazione sicura ed efficace dei mezzi indicati. 
+ 
+___________________________  
+Durata massima della prova: 6 ore.  
+È consentito l’uso di manuali tecnici, formulari e di calcolatrici scientifiche e/o grafiche purché non siano dotate di capacità di 
+calcolo simbolico (O.M. n. 205 Art. 17 comma 9). 
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua non italiana. 
+Non è consentito lasciare l’Istituto prima che siano trascorse 3 ore dalla dettatura del tema. 

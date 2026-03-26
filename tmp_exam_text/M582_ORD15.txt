@@ -1,0 +1,48 @@
+Pag.  1/1 Sessione ordinaria 2015  
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’Istruzione, dell’ Università e della Ricerca 
+ 
+M582 – ESAME DI STATO DI ISTRUZIONE SECONDARIA SUPERIORE 
+Indirizzo: ITCI – TRASPORTI LOGISTICA 
+ARTICOLAZIONE CONDUZIONE MEZZO 
+OPZIONE CONDUZIONE APPARATI IMPIANTI MARITTIMI 
+ 
+Tema di: MECCANICA E MACCHINE 
+ 
+Il candidato svolga la prima parte della prova e risponda a due dei quesiti proposti nella seconda 
+parte. 
+ 
+PRIMA PARTE 
+Una nave porta containers di 25000 GT con una velocità di 16 nodi, porta l’apparato motore  a 
+poppa. L a potenza effettiva istallata a bordo è di 12 MW,  fornita da un motore  Diesel lento 8 
+cilindri in linea, con un numero di giri  di 110 giri/min e una pressione media effettiva di 16,2 bar  
+sovralimentato. 
+Il candidato, dopo aver riportato lo schizzo di massi ma dell’apparato motore e del ciclo teorico di 
+riferimento, assumendo con opportuno criterio tutti gli altri dati mancanti, calcoli: 
+ le caratteristiche geometriche del cilindro; 
+ la velocità media; 
+ il rendimento globale sapendo che il consumo specifico è di 0,180 kg/kWh; 
+ il consumo orario;  
+ il consumo complessivo per una navigazione di 4000 miglia. 
+ 
+SECONDA PARTE 
+In riferimento ad uno dei quesiti svolti, il candidato faccia riferimento anche ad eventuali esperienze 
+lavorative dirette o mediante stage  o percorsi di alternanza scuola lavoro, evidenziando le 
+competenze acquisite. 
+1. Il candidato descriva le parti essenziali che costituiscono un impianto frigorifero, aiutandosi 
+eventualmente con uno schizzo di massima. 
+2. Il candidato descriva i principali dispositivi di protezione individuali (DPI) da utilizzare nelle 
+operazioni di manutenzione in sala macchine. 
+3. Il candidato descriva una delle diverse tipologie meccaniche per il governo del timone. 
+4. Il candidato descriva una delle diverse tipologie per la pr oduzione di acqua distillata, a bordo 
+delle navi. 
+ 
+____________________________ 
+Durata massima della prova: 6 ore. 
+È consentito l’uso di manuali tecnici e di calcolatrici tascabili non programmabili. 
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua non italiana. 
+Non è consentito lasciare l’aula prima che siano trascorse 3 ore dall'inizio della prova.  

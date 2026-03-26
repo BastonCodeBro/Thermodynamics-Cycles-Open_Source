@@ -379,7 +379,6 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
     };
   }
 
-  const { adjacency } = buildAdjacency(nodes, connections, domain, 'fluid');
   const activeWorkPath =
     validation.details.workConnectivity.find(
       (item) => item.valvePort === routeInfo.activeWorkPort,

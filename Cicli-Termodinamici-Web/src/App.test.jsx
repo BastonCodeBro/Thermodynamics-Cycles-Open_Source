@@ -27,7 +27,7 @@ describe('App routes', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/L'intera Termodinamica/i)).toBeInTheDocument();
+      expect(screen.getByText(/Tre aree per/i)).toBeInTheDocument();
     });
   });
 
@@ -66,6 +66,32 @@ describe('App routes', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Impianti Oleodinamici \/ Pneumatici/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Oleodinamica/i })).toBeInTheDocument();
+    });
+  });
+
+  test('renders thermodynamic library route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/cicli-termodinamici']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Tutti i principali cicli termodinamici/i })).toBeInTheDocument();
+      expect(screen.getByText(/Ciclo Joule-Brayton/i)).toBeInTheDocument();
+    });
+  });
+
+  test('renders state exams route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/esami-di-stato']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Tracce e svolgimenti dettagliati/i })).toBeInTheDocument();
+      expect(screen.getAllByText(/A056 Ordinaria 2025/i).length).toBeGreaterThan(0);
     });
   });
 });

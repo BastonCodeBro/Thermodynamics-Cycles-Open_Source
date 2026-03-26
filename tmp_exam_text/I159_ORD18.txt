@@ -1,0 +1,49 @@
+Pag.  1/1 Sessione ordinaria 2018  
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’Istruzione, dell’ Università e della Ricerca 
+ 
+ 
+I159 – ESAME DI STATO DI ISTRUZIONE SECONDARIA SUPERIORE 
+ 
+Indirizzo: ITCI - TRASPORTI E LOGISTICA 
+ARTICOLAZIONE CONDUZIONE DEL MEZZO 
+OPZIONE CONDUZIONE DI APPARATI E IMPIANTI MARITTIMI 
+Tema di: MECCANICA E MACCHINE 
+Il candidato svolga il tema indicato nella prima parte e risponda solo a due quesiti tra i quattro 
+proposti nella seconda parte. 
+PRIMA PARTE 
+Una nave LNG carrier (gasiera) è propulsa elettricamente con due azipod della potenza complessiva 
+di 24.000 kW che forniscono una velocità di 22 nodi. 
+L'energia elettrica necessaria è fornita da tre gruppi TG -alternatore alimentati a gas metano, con 
+potere calorifico inferiore pari a 50.000 kJ/kg, che sviluppano una potenza c omplessiva di 36.000 
+kW, parte della quale è destinata ai servizi elettrici di bordo. 
+Dell'impianto turbina a gas si conoscono i seguenti dati: 
+ Temperatura iniziale dell'aria 20°C; 
+ Temperatura massima all'uscita del combustore 1050°C; 
+ Rapporto manometrico di compressione β = 16; 
+ Consumo specifico di combustibile 0,225 kg/kWh. 
+Il candidato, dopo aver disegnato uno schema di massima di una turbina a gas con relativi cicli 
+termodinamici e assumendo con giustificato motivo ogni altro dato occorrente, determini: 
+1. Il rendimento del ciclo ideale e il rendimento globale; 
+2. I lavori di compressione e di espansione per kg di fluido agente; 
+3. Il lavoro utile per kg di fluido agente; 
+4. Il consumo totale dopo una traversata di 1500 miglia. 
+Si determini, infine, la portata di calore che è possibile recuperare dai gas di scarico delle turbine 
+nell'ipotesi che essi vengano espulsi in atmosfera alla temperatura di 200°C. 
+SECONDA PARTE 
+1) Si descriva, con riferimento alla tipologia di nave cisterna, un impianto di protezione a gas inerte 
+e si disegni uno schema di massima dello stesso. 
+2) Si descrivano i principali sistemi di difesa antincendio, attiva e passiva, tipicamente utilizzati su 
+navi mercantili. 
+3) Si descrivano le procedure per l'imbarco nafta sia dal punto di vista della qualità del prodotto sia 
+dal punto di vista della sicurezza. 
+4) Si elenchino e si descrivano gli annessi della convenzione Marpol. 
+___________________________ 
+Durata massima della prova: 6 ore. 
+È consentito soltanto l’uso di manuali tecnici e di calcolatrici non programmabili. 
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua non italiana.  
+Non è consentito lasciare l’Istituto prima che siano trascorse 3 ore dalla dettatura del tema. 

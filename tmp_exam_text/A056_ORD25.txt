@@ -1,0 +1,52 @@
+ 
+Pag.  1/1  Sessione ordinaria 2025 
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’istruzione e del merito 
+ 
+A056 - ESAME DI STATO CONCLUSIVO DEL SECONDO CICLO DI ISTRUZIONE 
+Indirizzo: ITCI - TRASPORTI E LOGISTICA  
+ARTICOLAZIONE: "CONDUZIONE DEL MEZZO"  
+OPZIONE: "CONDUZIONE DI APPARATI E IMPIANTI MARITTIMI" 
+ 
+Disciplina: MECCANICA E MACCHINE 
+ 
+Il candidato svolga il tema indicato nella prima parte e risponda a due soli quesiti 
+proposti nella seconda parte. 
+ 
+PRIMA PARTE 
+Una moderna nave da carico è propulsa da un motore diesel a 2 tempi a corsa extra lunga che 
+le imprime una velocità di 15 nodi e che presenta le seguenti caratteristiche: 
+• alesaggio 840 mm; 
+• numero cilindri 6; 
+• regime rotazionale 80 giri/min. 
+Il candidato, assumendo con giustificato criterio ogni altro dato occorrente, determini: 
+a) la potenza utilizzabile per la propulsione; 
+b) la portata di vapore prodotta dalla caldaia a gas di scarico; 
+c) il consumo di combustibile per miglio; 
+d) la capacità complessiva dei depositi di nafta pesante per garantire alla nave una autonomia 
+di 15.000 miglia. 
+Si disegni, inoltre, uno schema dell'impianto di produzione di vapore ausiliario con caldaie a 
+gas di scarico. 
+SECONDA PARTE 
+A. Con riferimento alla tipologia di nave sopra indicata si disegni schematicamente l'apparato 
+di propulsione indicando le tipologie delle macchine principali utilizzate. 
+B. In riferimento alla tipologia del motore della prima parte il candidato, dopo aver riportato 
+uno schema del sistema di raffreddamento, relazioni sulla tecnica di raffreddamento  
+bore-cooling. 
+C. Il candidato descriva sinteticamente il sistema di sovralimentazione di un moderno Diesel 
+a due tempi, corredandolo con uno schema funzionale in base alla scelta fatta. 
+D. Si descrivano gli impianti fissi e mobili di estinzione degli incendi nel settore navale con 
+riferimenti a specifiche normative. 
+ 
+ 
+________________________________ 
+Durata massima della prova: 6 ore. 
+È consentito soltanto l’uso di manuali tecnici e di calcolatrici scientifiche o grafiche purché non siano dotate della capacità di 
+elaborazione simbolica algebrica e non abbiano la disponibilità di connessione a Internet. 
+È consentito l’uso del dizionario della lingua italiana. 
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua non italiana. 
+Non è consentito lasciare l’Istituto prima che siano trascorse 3 ore dalla consegna della traccia. 

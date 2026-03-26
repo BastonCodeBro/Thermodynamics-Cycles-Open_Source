@@ -1,3 +1,5 @@
+import { fluidPowerExtendedComponents } from './fluidPowerCatalogExtended';
+
 export const FLUID_POWER_DOMAINS = [
   {
     id: 'hydraulic',
@@ -20,6 +22,8 @@ export const FLUID_POWER_CATEGORIES = [
   { id: 'valvole-distributrici', label: 'Valvole distributrici' },
   { id: 'alimentazione', label: 'Alimentazione' },
   { id: 'ausiliari', label: 'Ausiliari' },
+  { id: 'strumentazione-e-comandi', label: 'Strumentazione e comandi' },
+  { id: 'simbologia-base', label: 'Simbologia base' },
 ];
 
 const makeDirectionalValve = ({
@@ -502,6 +506,7 @@ export const componentCatalog = [
       defaultState: 'riposo',
     },
   },
+  ...fluidPowerExtendedComponents,
 ];
 
 const componentCatalogMap = new Map(componentCatalog.map((component) => [component.id, component]));

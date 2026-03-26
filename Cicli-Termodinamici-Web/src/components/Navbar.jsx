@@ -3,14 +3,10 @@ import { Wind, Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const cycleLinks = [
-  { to: '/rankine', label: 'Rankine' },
-  { to: '/brayton', label: 'Brayton' },
-  { to: '/otto', label: 'Otto' },
-  { to: '/diesel', label: 'Diesel' },
-  { to: '/frigo', label: 'Frigorifero' },
-  { to: '/carnot', label: 'Carnot' },
+  { to: '/cicli-termodinamici', label: 'Cicli' },
   { to: '/laboratorio-vapore', label: 'Lab Vapore' },
   { to: '/impianti-fluidici', label: 'Fluid Power' },
+  { to: '/esami-di-stato', label: 'Esami' },
 ];
 
 const Navbar = () => {

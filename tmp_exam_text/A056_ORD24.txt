@@ -1,0 +1,51 @@
+ 
+Pag.  1/1  Sessione ordinaria 2024 
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’istruzione e del merito 
+ 
+A056 - ESAME DI STATO CONCLUSIVO DEL SECONDO CICLO DI ISTRUZIONE 
+Indirizzo: ITCI - TRASPORTI E LOGISTICA  
+ARTICOLAZIONE: "CONDUZIONE DEL MEZZO"  
+OPZIONE: "CONDUZIONE DI APPARATI E IMPIANTI MARITTIMI" 
+ 
+Disciplina: MECCANICA E MACCHINE 
+ 
+Il candidato svolga il tema indicato nella prima parte e risponda a due soli quesiti 
+proposti nella seconda parte. 
+ 
+PRIMA PARTE 
+Una nave militare è dotata di un impianto di propulsione a turbo riduttore del tipo COGAG 
+(Combined Gas And Gas) costituito da quattro TAG, sviluppanti una potenza complessiva di 
+Peff = 78 MW capaci di portare la nave ad una andatura massima Vmax = 25 kn. 
+Tale sistema di propulsione consente di poter navigare con una, con due o con tutte e quattro 
+le turbine in funzione. 
+Si dispone dei seguenti dati: 
+• dislocamento a pieno carico 30.000 t; 
+• autonomia alla velocità di 15 nodi: 8.000 miglia; 
+• consumo orario di combustibile 19.000 Kg/h. 
+Il candidato, dopo aver scelto, con motivato criterio i dati ritenuti event ualmente necessari, 
+determini: 
+➢ Il consumo specifico; 
+➢ Il rendimento termico effettivo; 
+➢ La velocità di media e minima forza della nave;  
+➢ Il carico di combustibile necessario per coprire la predetta distanza. 
+Il candidato, inoltre, rappresenti graficamente lo schema dell’apparato di propulsione. 
+SECONDA PARTE 
+A. Il candidato descriva una delle diverse tipologie per la produzione di acqua distillata, a 
+bordo delle navi. 
+B. Il candidato descriva i principali dispositivi di protezione individuali (DPI) da utilizzare nelle 
+operazioni di manutenzione in sala macchine. 
+C. Il candidato, dopo aver disegnato uno schizzo di massima per un impianto a porte stagne, 
+ne descriva il funzionamento soffermandosi sui requisiti minimi imposti dalla S.O.L.A.S. 
+D. Il candidato descriva il funzionamento di un impianto a CO2 posto in sala macchine per 
+estinzione incendi, completando con uno schema di massima. 
+________________________________ 
+Durata massima della prova: 6 ore. 
+È consentito soltanto l’uso di manuali tecnici e di calcolatrici scientifiche o grafiche purché non siano dotate della capacità di 
+elaborazione simbolica algebrica e non abbiano la disponibilità di connessione a Internet.  
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua non italiana. 
+Non è consentito lasciare l’Istituto prima che siano trascorse 3 ore dalla consegna della traccia. 

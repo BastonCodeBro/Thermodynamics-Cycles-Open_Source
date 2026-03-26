@@ -135,6 +135,28 @@ const paletteGroups = (domain, search) => {
   })).filter((group) => group.items.length > 0);
 };
 
+const theoryCards = [
+  {
+    title: 'Oleodinamica',
+    body: 'Lavora ad alte pressioni, offre grande forza sugli attuatori ed e ideale per presse, timonerie, gru e macchine operatrici.',
+  },
+  {
+    title: 'Pneumatica',
+    body: 'Usa aria compressa, risponde rapidamente ed e adatta ad automazioni, pick-and-place, serraggi e attuazioni leggere.',
+  },
+  {
+    title: 'Metodo di studio',
+    body: 'Individua sempre sorgente, regolazione, attuatore e ritorno: e la chiave per leggere sia lo schema simbolico sia il circuito reale.',
+  },
+];
+
+const guidedCircuits = [
+  'Cilindro semplice effetto con valvola 3/2 e serbatoio o scarico.',
+  'Cilindro doppio effetto con distributore 5/2 e inversione di moto.',
+  'Pompa + valvola limitatrice + distributore + attuatore come catena minima oleodinamica.',
+  'Compressore + gruppo FRL + distributore + cilindro come catena minima pneumatica.',
+];
+
 const FluidPowerLabPage = () => {
   const [domain, setDomain] = useState('hydraulic');
   const [search, setSearch] = useState('');
@@ -495,6 +517,15 @@ const FluidPowerLabPage = () => {
         </p>
       </div>
 
+      <div className="fluid-theory-intro">
+        {theoryCards.map((card) => (
+          <article key={card.title} className="fluid-theory-card glass">
+            <h3 className="card-title">{card.title}</h3>
+            <p className="card-description">{card.body}</p>
+          </article>
+        ))}
+      </div>
+
       <div className="fluid-page-layout">
         <aside className="fluid-sidebar glass">
           <div className="fluid-domain-tabs">
@@ -768,6 +799,28 @@ const FluidPowerLabPage = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="fluid-guide-grid">
+        <section className="fluid-guide-panel glass">
+          <div className="section-subtitle">Componenti da riconoscere</div>
+          <ul className="fluid-guide-list">
+            <li>Pompa o compressore come sorgente di energia del fluido.</li>
+            <li>Serbatoio o scarico come riferimento del ritorno.</li>
+            <li>Distributori 3/2, 4/2 e 5/2 come organi di comando della direzione.</li>
+            <li>Valvole di massima, regolatori e FRL come organi di protezione e condizionamento.</li>
+            <li>Cilindri e motori come utilizzatori finali del circuito.</li>
+          </ul>
+        </section>
+
+        <section className="fluid-guide-panel glass">
+          <div className="section-subtitle">Circuiti guida da provare</div>
+          <ul className="fluid-guide-list">
+            {guidedCircuits.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
       </div>
     </section>
   );

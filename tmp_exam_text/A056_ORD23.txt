@@ -1,0 +1,57 @@
+ 
+Pag.  1/1  Sessione ordinaria 2023 
+ Seconda prova scritta  
+  
+ 
+ 
+ 
+Ministero dell’istruzione e del merito 
+ 
+A056 - ESAME DI STATO CONCLUSIVO DEL SECONDO CICLO DI ISTRUZIONE 
+ 
+Indirizzo: ITCI - TRASPORTI E LOGISTICA  
+ARTICOLAZIONE: "CONDUZIONE DEL MEZZO"  
+OPZIONE: "CONDUZIONE DI APPARATI E IMPIANTI MARITTIMI" 
+ 
+Disciplina: MECCANICA E MACCHINE 
+ 
+Il candidato svolga il tema indicato nella prima parte e risponda a due soli quesiti 
+proposti nella seconda parte. 
+ 
+PRIMA PARTE 
+Una nave cisterna monoelica, adibita al trasporto di olio grezzo, ha un apparato di propulsione 
+costituito da due motori Diesel due tempi a corsa super lunga, ciascuno con Z=12 cilindri in 
+linea ognuno dei quali fornisce una potenza effettiva PEFF=650 kW/cilindro al regime di n=150 
+RPM. La pressione media effettiva vale Pme=12 bar. L’elica funziona a ne=100 RPM. 
+La na ve presenta un piano generale costituito da n. 5 cisterne per il carico. Ogni cisterna 
+contiene un volume di carico pari a V=1000 m 3. Per le operazioni di movimentazione dell’olio 
+grezzo si prevedono due pompe centrifughe aventi prevalenza h=100 m. L’impianto è costituito 
+da tubazioni aventi diametro interno INT=300 mm ed è tale da poter consentire la discarica di 
+una cisterna alla volta, in un tempo per ciascuna cisterna di T=1 h. 
+ 
+Il candidato, assumendo con opportuno criterio i parametri occorrenti, determini: 
+1. Dimensionamento del motore; 
+2. Il rendimento termico effettivo del motore; 
+3. Il consumo orario Ch di combustibile; 
+4. Dimensione della cassa HFO giornaliera; 
+5. La potenza effettiva di ciascuna pompa; 
+6. La velocità dell’olio grezzo all’interno delle tubazioni. 
+Infine il candidato esegua, a sua scelta uno schizzo a mano libera o dell’impianto di propulsione 
+o dell’impianto di movimentazione del carico. 
+SECONDA PARTE 
+A. Descrivere il funzionamento di un impianto di timoneria elettroidraulico per una nave 
+petroliera, indicando con uno schizzo a mano libera l’impianto con i suoi elementi principali. 
+B. Descrivere il funzionamento di un impianto frigorifero a compressione di vapore, indicando 
+lo schema di funzionamento con uno schizzo a mano libera contenente i dispositivi 
+meccanici essenziali. Si indichi inoltre il ciclo termodinamico di riferimento su un 
+diagramma pressione entalpia. 
+C. Si descrivano i processi di depurazione dell’HFO e si disegni uno schema di massima di 
+un impianto di depurazione soffermandosi sul dispositivo di depurazione dinamica 
+(depuratore). 
+D. Descrivere l’impianto di bilanciamento di una nave traghetto. 
+________________________________ 
+Durata massima della prova: 6 ore. 
+È consentito soltanto l’uso di manuali tecnici e di calcolatrici non programmabili. 
+È consentito l’uso del dizionario bilingue (italiano-lingua del paese di provenienza) per i candidati di madrelingua 
+non italiana. 
+Non è consentito lasciare l’Istituto prima che siano trascorse 3 ore dalla consegna della traccia. 

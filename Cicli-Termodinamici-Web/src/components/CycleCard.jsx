@@ -11,7 +11,7 @@ const CycleCard = ({ title, id, description, Icon = Activity, color = '#38BDF8' 
       <h3 className="card-title">{title}</h3>
       <p className="card-description">{description}</p>
       <div className="card-footer" style={{ color }}>
-        Esplora Ciclo <span>→</span>
+        Apri sezione <span>-&gt;</span>
       </div>
     </Link>
   );
