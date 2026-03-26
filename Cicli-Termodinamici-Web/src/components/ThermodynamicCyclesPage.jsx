@@ -11,6 +11,7 @@ const iconByFamily = {
   'gas-power': Wind,
   'external-heat': Flame,
   reversed: Snowflake,
+  combined: Flame,
 };
 
 const ThermodynamicCyclesPage = () => {
@@ -22,7 +23,7 @@ const ThermodynamicCyclesPage = () => {
           Tutti i principali <span className="accent">cicli termodinamici</span>
         </h2>
         <p className="hero-description section-description">
-          Una biblioteca ordinata per ripasso, teoria e collegamento rapido ai simulatori gia presenti nel sito.
+          Una biblioteca ordinata per ripasso, teoria, schemi e collegamento rapido ai simulatori gia presenti nel sito.
         </p>
       </div>
 

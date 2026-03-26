@@ -667,6 +667,12 @@ const domainAuxiliaries = DOMAINS.flatMap((domain) => [
     description: 'Valvola shuttle per selezione di due linee.',
     symbol: 'control-valve',
     symbolVariant: { style: 'shuttle' },
+    ports: [
+      { id: 'IN1', label: 'IN1', side: 'left', align: 0.5, kind: 'fluid' },
+      { id: 'IN2', label: 'IN2', side: 'top', align: 0.35, kind: 'fluid' },
+      { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
+    ],
+    passThroughRoutes: [['IN1', 'OUT'], ['IN2', 'OUT']],
   }),
   makeInlineAux({
     id: `${domain.id}-quick-exhaust`,
@@ -676,6 +682,11 @@ const domainAuxiliaries = DOMAINS.flatMap((domain) => [
     symbol: 'control-valve',
     symbolVariant: { style: 'quick-exhaust' },
     defaultSize: { width: 148, height: 92 },
+    ports: [
+      { id: 'IN', label: 'IN', side: 'left', align: 0.5, kind: 'fluid' },
+      { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
+      { id: 'EXH', label: 'EXH', side: 'top', align: 0.32, kind: 'fluid' },
+    ],
   }),
   makeInlineAux({
     id: `${domain.id}-relief-valve`,
@@ -729,6 +740,12 @@ const domainAuxiliaries = DOMAINS.flatMap((domain) => [
     symbol: 'control-valve',
     symbolVariant: { style: 'flow-divider' },
     defaultSize: { width: 148, height: 92 },
+    ports: [
+      { id: 'IN', label: 'IN', side: 'left', align: 0.5, kind: 'fluid' },
+      { id: 'A', label: 'A', side: 'right', align: 0.34, kind: 'fluid' },
+      { id: 'B', label: 'B', side: 'right', align: 0.72, kind: 'fluid' },
+    ],
+    passThroughRoutes: [['IN', 'A'], ['IN', 'B']],
   }),
   makeInlineAux({
     id: `${domain.id}-isolation-cock`,

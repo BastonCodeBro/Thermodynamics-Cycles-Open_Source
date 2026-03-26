@@ -16,7 +16,7 @@ export const thermodynamicFamilies = [
       {
         id: 'diesel',
         title: 'Ciclo Diesel',
-        focus: 'Combustione a pressione costante con rapporto di combustione rc.',
+        focus: 'Combustione a pressione costante con rapporto di cut-off rc.',
         useCase: 'Motori diesel veloci, medi e lenti.',
         formula: 'eta = 1 - (1 / r^(gamma - 1)) * ((rc^gamma - 1) / (gamma * (rc - 1)))',
         route: '/diesel',
@@ -153,6 +153,14 @@ export const thermodynamicFamilies = [
         useCase: 'Trigenerazione e recupero di calore di scarto.',
         formula: 'Si valuta con COP termico e bilanci entalpici di soluzione.',
       },
+    ],
+  },
+  {
+    id: 'combined',
+    label: 'Cicli combinati e di recupero',
+    description: 'Architetture che accoppiano piu cicli per aumentare il rendimento complessivo dell impianto.',
+    accent: '#F59E0B',
+    cycles: [
       {
         id: 'combined',
         title: 'Ciclo combinato gas-vapore',

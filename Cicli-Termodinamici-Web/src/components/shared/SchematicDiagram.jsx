@@ -6,6 +6,11 @@ const MUTED = '#94A3B8';
 const PIPE = '#CBD5E1';
 const PANEL = '#0F172A';
 const CARD = '#111827';
+const SCHEMA_WIDTH = 1180;
+const SCHEMA_HEIGHT = 596;
+const PLANT_PANEL = { x: 20, y: 20, width: 636, height: 470 };
+const INFO_PANEL = { x: 676, y: 20, width: 484, height: 470 };
+const SUMMARY_PANEL = { x: 20, y: 510, width: 1140, height: 66 };
 
 const formatValueUnit = (value, type, unit) => {
   const formatted = formatValue(value, type);
@@ -241,8 +246,15 @@ const renderBraytonPlant = () => {
 
 const PhaseStep = ({ x, y, num, label, detail, color }) => (
   <g transform={`translate(${x},${y})`}>
-    <circle r="14" fill={PANEL} stroke={color} strokeWidth="2" />
-    <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="11" fontWeight="800">
+    <circle r="18" fill={PANEL} stroke={color} strokeWidth="2" />
+    <text
+      y="1"
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fill={color}
+      fontSize={String(num).length > 2 ? '8.5' : '11'}
+      fontWeight="800"
+    >
       {num}
     </text>
     <text y="24" textAnchor="middle" fill={TEXT} fontSize="9" fontWeight="700">{label}</text>
@@ -253,10 +265,10 @@ const PhaseStep = ({ x, y, num, label, detail, color }) => (
 const renderOttoPlant = (color) => (
   <g>
     <Cylinder x={286} y={150} color={color} label="CILINDRO - CICLO OTTO" topLabel="CANDELA" />
-    <PhaseStep x={196} y={88} num="1" label="Aspirazione" detail="P bassa, T ambiente" color={color} />
-    <PhaseStep x={376} y={88} num="2" label="Compressione" detail="isentropica" color={color} />
-    <PhaseStep x={376} y={234} num="3" label="Combustione" detail="isocora" color={color} />
-    <PhaseStep x={196} y={234} num="4" label="Espansione" detail="isentropica" color={color} />
+    <PhaseStep x={196} y={88} num="1-2" label="Compressione" detail="isentropica" color={color} />
+    <PhaseStep x={376} y={88} num="2-3" label="Calore immesso" detail="volume costante" color={color} />
+    <PhaseStep x={376} y={234} num="3-4" label="Espansione" detail="isentropica" color={color} />
+    <PhaseStep x={196} y={234} num="4-1" label="Calore ceduto" detail="volume costante" color={color} />
     <line x1="210" y1="88" x2="362" y2="88" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
     <line x1="376" y1="102" x2="376" y2="220" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
     <line x1="362" y1="234" x2="210" y2="234" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
@@ -266,7 +278,7 @@ const renderOttoPlant = (color) => (
     <polygon points="210,238 202,234 210,230" fill={`${color}80`} />
     <polygon points="192,102 196,94 200,102" fill={`${color}80`} />
     <text x="286" y="316" textAnchor="middle" fill={MUTED} fontSize="11" fontWeight="700">
-      Sequenza temporale nel cilindro (sistema chiuso)
+      Trasformazioni ideali nel cilindro (ciclo chiuso)
     </text>
   </g>
 );
@@ -274,10 +286,10 @@ const renderOttoPlant = (color) => (
 const renderDieselPlant = (color) => (
   <g>
     <Cylinder x={286} y={150} color={color} label="CILINDRO - CICLO DIESEL" topLabel="INIETTORE" />
-    <PhaseStep x={196} y={88} num="1" label="Aspirazione" detail="P bassa, T ambiente" color={color} />
-    <PhaseStep x={376} y={88} num="2" label="Compressione" detail="isentropica" color={color} />
-    <PhaseStep x={376} y={234} num="3" label="Combustione" detail="P costante" color={color} />
-    <PhaseStep x={196} y={234} num="4" label="Espansione" detail="isentropica" color={color} />
+    <PhaseStep x={196} y={88} num="1-2" label="Compressione" detail="isentropica" color={color} />
+    <PhaseStep x={376} y={88} num="2-3" label="Calore immesso" detail="pressione costante" color={color} />
+    <PhaseStep x={376} y={234} num="3-4" label="Espansione" detail="isentropica" color={color} />
+    <PhaseStep x={196} y={234} num="4-1" label="Calore ceduto" detail="volume costante" color={color} />
     <line x1="210" y1="88" x2="362" y2="88" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
     <line x1="376" y1="102" x2="376" y2="220" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
     <line x1="362" y1="234" x2="210" y2="234" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
@@ -287,7 +299,7 @@ const renderDieselPlant = (color) => (
     <polygon points="210,238 202,234 210,230" fill={`${color}80`} />
     <polygon points="192,102 196,94 200,102" fill={`${color}80`} />
     <text x="286" y="316" textAnchor="middle" fill={MUTED} fontSize="11" fontWeight="700">
-      Sequenza temporale nel cilindro (sistema chiuso)
+      Trasformazioni ideali nel cilindro (ciclo chiuso)
     </text>
   </g>
 );
@@ -322,8 +334,8 @@ const renderCarnotPlant = (color) => (
     <rect x="212" y="258" width="148" height="58" rx="14" fill="#16263A" stroke="#3B82F6" strokeWidth="3" />
     <rect x="204" y="126" width="164" height="102" rx="18" fill="#171E2D" stroke={color} strokeWidth="3" />
 
-    <text x="286" y="64" textAnchor="middle" fill="#EF4444" fontSize="16" fontWeight="800">SORGENTE TH</text>
-    <text x="286" y="294" textAnchor="middle" fill="#3B82F6" fontSize="16" fontWeight="800">POZZO TL</text>
+    <text x="286" y="64" textAnchor="middle" fill="#EF4444" fontSize="16" fontWeight="800">SORGENTE T_H</text>
+    <text x="286" y="294" textAnchor="middle" fill="#3B82F6" fontSize="16" fontWeight="800">POZZO T_L</text>
     <text x="286" y="172" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">MOTORE</text>
     <text x="286" y="194" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">CARNOT</text>
 
@@ -387,38 +399,46 @@ const SchematicDiagram = ({
   points = [],
   pointLabels = [],
   summaryItems = [],
-  width = 980,
-  height = 420,
+  width = SCHEMA_WIDTH,
 }) => {
   const plant = buildPlant(type, accentColor);
   const infoPoints = points.slice(0, 4);
   const infoLabels = infoPoints.map((point, index) => pointLabels[index] ?? point?.name ?? `Punto ${index + 1}`);
-  const cardWidth = 306;
+  const pointCardWidth = INFO_PANEL.width - 48;
+  const pointCardHeight = 88;
+  const pointCardGap = 8;
   const visibleSummaryItems = summaryItems.slice(0, 5);
-  const summaryCardWidth = visibleSummaryItems.length >= 5 ? 164 : 178;
-  const summaryGap = 12;
-  const summaryTotalWidth = visibleSummaryItems.length * summaryCardWidth + Math.max(visibleSummaryItems.length - 1, 0) * summaryGap;
-  const summaryStartX = 964 - summaryTotalWidth - 18;
+  const summaryGap = 14;
+  const summaryCardWidth = visibleSummaryItems.length >= 5 ? 204 : 236;
+  const summaryTotalWidth =
+    visibleSummaryItems.length * summaryCardWidth + Math.max(visibleSummaryItems.length - 1, 0) * summaryGap;
+  const summaryStartX = SUMMARY_PANEL.x + (SUMMARY_PANEL.width - summaryTotalWidth) / 2;
 
   return (
     <div className="schematic-container glass">
-      <svg viewBox="0 0 980 460" width="100%" height="100%" className="schematic-svg" style={{ width, height }}>
-        <rect x="16" y="16" width="566" height="360" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
-        <rect x="602" y="16" width="362" height="360" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
-        <rect x="16" y="392" width="948" height="52" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+      <svg
+        viewBox={`0 0 ${SCHEMA_WIDTH} ${SCHEMA_HEIGHT}`}
+        width="100%"
+        className="schematic-svg"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ minWidth: width, height: 'auto' }}
+      >
+        <rect x={PLANT_PANEL.x} y={PLANT_PANEL.y} width={PLANT_PANEL.width} height={PLANT_PANEL.height} rx="24" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+        <rect x={INFO_PANEL.x} y={INFO_PANEL.y} width={INFO_PANEL.width} height={INFO_PANEL.height} rx="24" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+        <rect x={SUMMARY_PANEL.x} y={SUMMARY_PANEL.y} width={SUMMARY_PANEL.width} height={SUMMARY_PANEL.height} rx="22" fill="#111827" stroke="rgba(255,255,255,0.08)" />
 
-        <text x="40" y="42" fill={TEXT} fontSize="14" fontWeight="800">Schema impianto</text>
-        <text x="626" y="42" fill={TEXT} fontSize="14" fontWeight="800">Punti del ciclo</text>
-        <text x="40" y="420" fill={TEXT} fontSize="14" fontWeight="800">Bilancio energetico</text>
+        <text x={PLANT_PANEL.x + 24} y={PLANT_PANEL.y + 28} fill={TEXT} fontSize="15" fontWeight="800">Schema impianto</text>
+        <text x={INFO_PANEL.x + 24} y={INFO_PANEL.y + 28} fill={TEXT} fontSize="15" fontWeight="800">Punti del ciclo</text>
+        <text x={SUMMARY_PANEL.x + 24} y={SUMMARY_PANEL.y + 37} fill={TEXT} fontSize="15" fontWeight="800">Bilancio energetico</text>
 
-        <g transform="translate(10,12)">{plant}</g>
+        <g transform="translate(48,56)">{plant}</g>
 
         {infoPoints.map((point, index) => (
           <PointCard
             key={`${infoLabels[index]}-${index}`}
-            x={628}
-            y={58 + index * 78}
-            width={cardWidth}
+            x={INFO_PANEL.x + 24}
+            y={INFO_PANEL.y + 52 + index * (pointCardHeight + pointCardGap)}
+            width={pointCardWidth}
             label={infoLabels[index]}
             point={point}
             color={accentColor}
@@ -429,7 +449,7 @@ const SchematicDiagram = ({
           <MetricCard
             key={`${item.label}-${index}`}
             x={summaryStartX + index * (summaryCardWidth + summaryGap)}
-            y={402}
+            y={SUMMARY_PANEL.y + 3}
             width={summaryCardWidth}
             label={item.label}
             value={item.value}

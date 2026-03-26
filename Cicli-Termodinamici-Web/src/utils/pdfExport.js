@@ -97,7 +97,7 @@ export const exportToPDF = async ({
     eta_s: 'Rendimento Isentropico',
     mass_flow: 'Portata Massica (kg/s)',
     r: 'Rapporto di Compressione',
-    rc: 'Rapporto di Combustione',
+    rc: 'Rapporto di Cut-off',
     beta: 'Rapporto Compressione (beta)',
     sh: 'Surriscaldamento (K)',
     sc: 'Sottoraffreddamento (K)',

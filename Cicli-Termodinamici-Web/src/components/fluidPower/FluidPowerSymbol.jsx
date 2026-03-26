@@ -2,7 +2,7 @@ import React from 'react';
 
 const domainColor = (component, active) => {
   const base = component.domain === 'hydraulic' ? '#F59E0B' : '#38BDF8';
-  return active ? '#22D3EE' : base;
+  return active ? (component.domain === 'hydraulic' ? '#FB923C' : '#22D3EE') : base;
 };
 
 const Box = ({ border = '#38BDF8', fill = '#0F172A' }) => (
@@ -183,6 +183,7 @@ const ControlValve = ({ component, color }) => {
           <circle cx="62" cy="48" r="10" fill="none" stroke={color} strokeWidth="3" />
           <path d="M72 48 H118" stroke={color} strokeWidth="3" />
           <path d="M18 48 H52" stroke={color} strokeWidth="3" />
+          <path d="M62 18 V38" stroke={color} strokeWidth="3" />
         </>
       );
     case 'quick-exhaust':
@@ -220,7 +221,10 @@ const ControlValve = ({ component, color }) => {
       return (
         <>
           <rect x="20" y="20" width="120" height="56" rx="12" fill="#111827" stroke={color} strokeWidth="3" />
+          <path d="M18 48 H64" stroke={color} strokeWidth="3" />
           <path d="M80 24 V72" stroke={color} strokeWidth="3" />
+          <path d="M80 48 H142" stroke={color} strokeWidth="3" strokeDasharray="6 4" />
+          <path d="M92 40 H142 M92 56 H142" stroke={color} strokeWidth="3" />
           <path d="M52 58 L68 40 M92 40 L108 58" stroke={color} strokeWidth="3" />
         </>
       );
@@ -613,12 +617,124 @@ const renderSymbol = (component, color) => {
   }
 };
 
-const FluidPowerSymbol = ({ component, active = false, label }) => {
-  const color = domainColor(component, active);
+const renderMotionOverlay = (component, motionState, color) => {
+  if (!motionState) {
+    return null;
+  }
+
+  if (
+    component.symbol === 'pump' ||
+    component.symbol === 'compressor' ||
+    component.symbol === 'rotary-machine'
+  ) {
+    return (
+      <g opacity="0.92">
+        <circle cx="80" cy="48" r="22" fill="none" stroke={color} strokeWidth="2.5" className="fluid-symbol-glow" />
+        <g className="fluid-symbol-rotor">
+          <path d="M80 28 L90 48 L80 68 L70 48 Z" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2.5" />
+        </g>
+        <path d="M24 48 H48 M112 48 H136" stroke={color} strokeWidth="3.5" className="fluid-symbol-flow" />
+      </g>
+    );
+  }
+
+  if (
+    component.symbol === 'single-cylinder' ||
+    component.symbol === 'double-cylinder' ||
+    component.symbol === 'cylinder-advanced'
+  ) {
+    const reverse = typeof motionState === 'string' && motionState.includes('ritra');
+
+    return (
+      <g opacity="0.92">
+        <rect
+          x="46"
+          y="38"
+          width="46"
+          height="20"
+          rx="4"
+          fill={color}
+          fillOpacity="0.14"
+          stroke={color}
+          strokeWidth="2"
+          className={`fluid-symbol-piston ${reverse ? 'fluid-symbol-piston-reverse' : ''}`}
+        />
+        <path
+          d="M92 48 H132"
+          stroke={color}
+          strokeWidth="3.5"
+          className={`fluid-symbol-piston ${reverse ? 'fluid-symbol-piston-reverse' : ''}`}
+        />
+        <path d="M22 48 H42" stroke={color} strokeWidth="3" className="fluid-symbol-flow" />
+      </g>
+    );
+  }
+
+  if (
+    component.symbol?.startsWith('directional-') ||
+    component.symbol === 'control-valve' ||
+    component.symbol === 'flow-control' ||
+    component.symbol === 'check-valve' ||
+    component.symbol === 'logic-valve' ||
+    component.symbol === 'limit-valve'
+  ) {
+    return (
+      <g opacity="0.94">
+        <path d="M30 48 H130" stroke={color} strokeWidth="4" className="fluid-symbol-flow" />
+        <circle cx="80" cy="48" r="12" fill="none" stroke={color} strokeWidth="2" className="fluid-symbol-glow" />
+      </g>
+    );
+  }
+
+  if (
+    component.symbol === 'service-unit' ||
+    component.symbol === 'frl' ||
+    component.symbol === 'reservoir' ||
+    component.symbol === 'exhaust'
+  ) {
+    return (
+      <g opacity="0.9">
+        <path d="M24 48 H136" stroke={color} strokeWidth="3.5" className="fluid-symbol-flow" />
+        <path d="M46 52 Q58 44 70 52 T94 52 T118 52" stroke={color} strokeWidth="2.5" className="fluid-symbol-wave" />
+      </g>
+    );
+  }
+
+  if (component.symbol === 'prime-mover') {
+    return (
+      <g opacity="0.92">
+        <circle cx="80" cy="42" r="18" fill="none" stroke={color} strokeWidth="2.5" className="fluid-symbol-glow" />
+        <g className="fluid-symbol-rotor">
+          <path d="M80 24 L88 42 L80 60 L72 42 Z" fill={color} fillOpacity="0.12" stroke={color} strokeWidth="2.2" />
+        </g>
+      </g>
+    );
+  }
+
+  if (component.symbol === 'instrument') {
+    return (
+      <g opacity="0.94">
+        <circle cx="80" cy="42" r="22" fill="none" stroke={color} strokeWidth="2.5" className="fluid-symbol-glow" />
+        <path d="M80 42 L96 26" stroke={color} strokeWidth="3" className="fluid-symbol-meter" />
+      </g>
+    );
+  }
 
   return (
-    <svg viewBox="0 0 160 100" className="fluid-symbol" role="img" aria-label={label ?? component.label}>
+    <g opacity="0.88">
+      <path d="M32 48 H128" stroke={color} strokeWidth="3.5" className="fluid-symbol-flow" />
+    </g>
+  );
+};
+
+const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null }) => {
+  const color = domainColor(component, active);
+  const svgClassName = ['fluid-symbol', className].filter(Boolean).join(' ');
+
+  return (
+    <svg viewBox="0 0 160 100" className={svgClassName} role="img" aria-label={label ?? component.label}>
       {renderSymbol(component, color)}
+      {renderMotionOverlay(component, motionState, color)}
     </svg>
   );
 };

@@ -106,7 +106,7 @@ const OttoPage = () => {
         layout.annotations = [
           ...pointAnnotations(
             pts.map((p) => ({ x: p.s, y: p.t })),
-            ['1\nAspirazione', '2\nCompressione', '3\nCombustione', '4\nEspansione'],
+            ['1\nInizio comp.', '2\nFine comp.', '3\nFine calore in', '4\nFine espansione'],
             COLOR,
           ),
           ...pointAnnotations(
@@ -298,7 +298,7 @@ const OttoPage = () => {
 
   const schematicProps = results ? {
     points: results.allPoints,
-    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
+    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine apporto calore', '4 Fine espansione'],
     summaryItems: [
       { label: 'Lavoro netto', value: `${(results.stats.q_in - results.stats.q_out).toFixed(1)} kJ/kg`, color: COLOR },
       { label: 'Calore in', value: `${results.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
@@ -327,9 +327,9 @@ const OttoPage = () => {
       }))}
       formulas={[
         { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: inputs.r },
-        { label: '1 -> 2', latex: 'Compressione politropica reale con v_2 = \\frac{v_1}{r}' },
+        { label: '1 -> 2', latex: 'Compressione reale con v_2 = \\frac{v_1}{r}' },
         { label: '2 -> 3', latex: 'Apporto di calore a volume costante' },
-        { label: '3 -> 4', latex: 'Espansione politropica reale fino a v_4 = v_1' },
+        { label: '3 -> 4', latex: 'Espansione reale fino a v_4 = v_1' },
         { label: '4 -> 1', latex: 'Cessione di calore a volume costante' },
         { label: 'Calore in ingresso', latex: 'q_{in} = c_v (T_3 - T_2)', value: results.stats.q_in },
         { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: results.stats.q_out },

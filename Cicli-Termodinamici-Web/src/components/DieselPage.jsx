@@ -241,7 +241,7 @@ const DieselPage = () => {
         stats: cycle.stats,
       });
     } catch (calculationError) {
-      setError('Parametri non validi: controlla rapporto di compressione, rapporto di combustione e rendimento.');
+      setError('Parametri non validi: controlla rapporto di compressione, rapporto di cut-off e rendimento.');
       console.error(calculationError);
     } finally {
       setLoading(false);
@@ -327,10 +327,10 @@ const DieselPage = () => {
       }))}
       formulas={[
         { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: inputs.r },
-        { label: 'Rapporto di combustione', latex: 'r_c = \\frac{v_3}{v_2}', value: inputs.rc },
-        { label: '1 -> 2', latex: 'Compressione politropica reale' },
+        { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_3}{v_2}', value: inputs.rc },
+        { label: '1 -> 2', latex: 'Compressione reale' },
         { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
-        { label: '3 -> 4', latex: 'Espansione politropica reale' },
+        { label: '3 -> 4', latex: 'Espansione reale' },
         { label: '4 -> 1', latex: 'Cessione di calore a volume costante' },
         { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: results.stats.q_in },
         { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: results.stats.q_out },
@@ -370,7 +370,7 @@ const DieselPage = () => {
       <h3 className="card-title">Parametri Motore</h3>
       <div className="inputs-grid">
         <InputField label="Rapporto di Compressione" value={inputs.r} onChange={(value) => setInputs({ ...inputs, r: value })} accent={COLOR} />
-        <InputField label="Rapporto di Combustione" value={inputs.rc} onChange={(value) => setInputs({ ...inputs, rc: value })} step={0.1} accent={COLOR} />
+        <InputField label="Rapporto di Cut-off" value={inputs.rc} onChange={(value) => setInputs({ ...inputs, rc: value })} step={0.1} accent={COLOR} />
         <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
       </div>
       <div className="inputs-row">

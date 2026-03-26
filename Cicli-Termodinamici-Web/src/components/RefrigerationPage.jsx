@@ -229,12 +229,12 @@ const RefrigerationPage = () => {
         t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
       }))}
       formulas={[
-        { label: 'Punto 1 — Uscita evaporatore', latex: 'P_1 = P_{sat}(T_{evap}), \\quad T_1 = T_{evap} + \\Delta T_{sh}' },
-        { label: 'Punto 2 — Uscita compressore (reale)', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_s}, \\quad P_2 = P_{sat}(T_{cond})' },
-        { label: 'Punto 3 — Uscita condensatore', latex: 'P_3 = P_2, \\quad T_3 = T_{cond} - \\Delta T_{sc}' },
-        { label: 'Punto 4 — Uscita valvola (isentalpica)', latex: 'h_4 = h_3, \\quad P_4 = P_1' },
+        { label: 'Punto 1 - Uscita evaporatore', latex: 'P_1 = P_{sat}(T_{evap}), \\quad T_1 = T_{evap} + \\Delta T_{sh}' },
+        { label: 'Punto 2 - Uscita compressore (reale)', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_s}, \\quad P_2 = P_{sat}(T_{cond})' },
+        { label: 'Punto 3 - Uscita condensatore', latex: 'P_3 = P_2, \\quad T_3 = T_{cond} - \\Delta T_{sc}' },
+        { label: 'Punto 4 - Uscita valvola (isentalpica)', latex: 'h_4 = h_3, \\quad P_4 = P_1' },
         { label: 'Lavoro Compressore', latex: 'w_{in} = h_2 - h_1', value: results.stats.win },
-        { label: 'Capacità Frigorifera', latex: 'q_L = h_1 - h_4', value: results.stats.qlow },
+        { label: 'Capacita Frigorifera', latex: 'q_L = h_1 - h_4', value: results.stats.qlow },
         { label: 'Calore Alto', latex: 'q_H = h_2 - h_3', value: results.stats.qhigh },
         { label: 'COP Frigorifero', latex: 'COP_{ref} = \\frac{h_1 - h_4}{h_2 - h_1}', value: results.stats.cop, display: true },
         { label: 'COP Pompa di Calore', latex: 'COP_{hp} = \\frac{h_2 - h_3}{h_2 - h_1}', value: results.stats.cop_hp, display: true },
@@ -247,7 +247,7 @@ const RefrigerationPage = () => {
     <div className="stats-row">
       <StatCard label="COP Frigorifero" value={results.stats.cop.toFixed(2)} accent color={COLOR} />
       <StatCard label="COP Pompa di Calore" value={results.stats.cop_hp.toFixed(2)} />
-      <StatCard label="Capacità Frigorifera" value={`${results.stats.cooling_cap.toFixed(2)} kW`} />
+      <StatCard label="Capacita Frigorifera" value={`${results.stats.cooling_cap.toFixed(2)} kW`} />
       <StatCard label="Lavoro Compressore" value={`${results.stats.win.toFixed(1)} kJ/kg`} />
     </div>
   ) : null;

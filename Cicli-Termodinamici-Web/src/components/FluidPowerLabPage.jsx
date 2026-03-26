@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, Move, Play, RotateCcw, Trash2, Waves } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, ChevronDown, Move, Play, RotateCcw, Trash2, Waves } from 'lucide-react';
 import {
   createInitialNodeState,
   FLUID_POWER_CATEGORIES,
@@ -16,8 +16,38 @@ import {
 } from '../utils/fluidPowerSimulation';
 
 const GRID_SIZE = 24;
-const CANVAS_WIDTH = 980;
-const CANVAS_HEIGHT = 640;
+const CANVAS_WIDTH = 1160;
+const CANVAS_HEIGHT = 760;
+const CANVAS_PADDING = 24;
+const PORT_LEAD = 38;
+const DEFAULT_EXPANDED_GROUPS = [
+  'alimentazione',
+  'valvole-distributrici',
+  'utilizzatori',
+  'ausiliari',
+];
+
+const CATEGORY_COPY = {
+  alimentazione: 'Sorgenti, ritorni e unita di servizio per alimentare correttamente il circuito.',
+  'valvole-distributrici': 'Organi di comando per indirizzare il flusso e cambiare il moto dell attuatore.',
+  utilizzatori: 'Cilindri e motori che trasformano l energia del fluido in lavoro utile.',
+  ausiliari: 'Elementi di regolazione, protezione e logica per completare lo schema.',
+  'strumentazione-e-comandi': 'Indicatori e comandi simbolici utili a leggere la funzione del circuito.',
+  'simbologia-base': 'Segni grafici di supporto per ripassare la simbologia ISO del fluid power.',
+};
+
+const createExpandedGroupState = () =>
+  Object.fromEntries(
+    FLUID_POWER_DOMAINS.map(({ id: domainId }) => [
+      domainId,
+      Object.fromEntries(
+        FLUID_POWER_CATEGORIES.map(({ id: categoryId }) => [
+          categoryId,
+          DEFAULT_EXPANDED_GROUPS.includes(categoryId),
+        ]),
+      ),
+    ]),
+  );
 
 const createWorkspace = () => ({
   nodes: [],
@@ -49,6 +79,43 @@ const createNodeId = () =>
 const createConnectionId = () =>
   `connection-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+const isHorizontalSide = (side) => side === 'left' || side === 'right';
+
+const getPortLeadPoint = (point, side, distance = PORT_LEAD) => {
+  if (side === 'left') {
+    return { x: point.x - distance, y: point.y };
+  }
+  if (side === 'right') {
+    return { x: point.x + distance, y: point.y };
+  }
+  if (side === 'top') {
+    return { x: point.x, y: point.y - distance };
+  }
+
+  return { x: point.x, y: point.y + distance };
+};
+
+const dedupePoints = (points) =>
+  points.filter(
+    (point, index, array) =>
+      index === 0 || point.x !== array[index - 1].x || point.y !== array[index - 1].y,
+  );
+
+const distanceBetween = (first, second) => Math.hypot(second.x - first.x, second.y - first.y);
+
+const moveTowards = (from, to, distance) => {
+  const totalDistance = distanceBetween(from, to);
+
+  if (totalDistance === 0) {
+    return { ...from };
+  }
+
+  return {
+    x: from.x + ((to.x - from.x) * distance) / totalDistance,
+    y: from.y + ((to.y - from.y) * distance) / totalDistance,
+  };
+};
+
 const getPortPosition = (node, component, port) => {
   const width = component.defaultSize.width;
   const height = component.defaultSize.height;
@@ -66,19 +133,91 @@ const getPortPosition = (node, component, port) => {
   return { x: node.x + width * port.align, y: node.y + height };
 };
 
-const computeConnectionPath = (start, end) => {
-  const middleX = (start.x + end.x) / 2;
+const computeConnectionPath = (start, end, startPort, endPort) => {
+  const startLead = getPortLeadPoint(start, startPort.side);
+  const endLead = getPortLeadPoint(end, endPort.side);
+  const points = [start, startLead];
+  const middleX = startLead.x + (endLead.x - startLead.x) / 2;
+  const middleY = startLead.y + (endLead.y - startLead.y) / 2;
 
-  return [
-    start,
-    { x: middleX, y: start.y },
-    { x: middleX, y: end.y },
-    end,
-  ];
+  if (isHorizontalSide(startPort.side) && isHorizontalSide(endPort.side)) {
+    if (startPort.side === endPort.side) {
+      const detourX =
+        startPort.side === 'right'
+          ? Math.max(startLead.x, endLead.x) + PORT_LEAD
+          : Math.min(startLead.x, endLead.x) - PORT_LEAD;
+
+      points.push({ x: detourX, y: startLead.y }, { x: detourX, y: endLead.y });
+    } else {
+      points.push({ x: middleX, y: startLead.y }, { x: middleX, y: endLead.y });
+    }
+  } else if (!isHorizontalSide(startPort.side) && !isHorizontalSide(endPort.side)) {
+    if (startPort.side === endPort.side) {
+      const detourY =
+        startPort.side === 'bottom'
+          ? Math.max(startLead.y, endLead.y) + PORT_LEAD
+          : Math.min(startLead.y, endLead.y) - PORT_LEAD;
+
+      points.push({ x: startLead.x, y: detourY }, { x: endLead.x, y: detourY });
+    } else {
+      points.push({ x: startLead.x, y: middleY }, { x: endLead.x, y: middleY });
+    }
+  } else {
+    points.push(
+      isHorizontalSide(startPort.side)
+        ? { x: middleX, y: startLead.y }
+        : { x: startLead.x, y: middleY },
+      isHorizontalSide(startPort.side)
+        ? { x: middleX, y: endLead.y }
+        : { x: endLead.x, y: middleY },
+    );
+  }
+
+  points.push(endLead, end);
+  return dedupePoints(points);
 };
 
-const pointsToPath = (points) =>
-  points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+const pointsToPath = (points) => {
+  if (points.length === 0) {
+    return '';
+  }
+
+  if (points.length === 1) {
+    return `M ${points[0].x} ${points[0].y}`;
+  }
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previousPoint = points[index - 1];
+    const currentPoint = points[index];
+    const nextPoint = points[index + 1];
+
+    if (!nextPoint) {
+      path += ` L ${currentPoint.x} ${currentPoint.y}`;
+      continue;
+    }
+
+    const radius = Math.min(
+      16,
+      distanceBetween(previousPoint, currentPoint) / 2,
+      distanceBetween(currentPoint, nextPoint) / 2,
+    );
+
+    if (radius < 1) {
+      path += ` L ${currentPoint.x} ${currentPoint.y}`;
+      continue;
+    }
+
+    const cornerStart = moveTowards(currentPoint, previousPoint, radius);
+    const cornerEnd = moveTowards(currentPoint, nextPoint, radius);
+
+    path += ` L ${cornerStart.x} ${cornerStart.y}`;
+    path += ` Q ${currentPoint.x} ${currentPoint.y} ${cornerEnd.x} ${cornerEnd.y}`;
+  }
+
+  return path;
+};
 
 const describeActuatorState = (node, component) => {
   const routeInfo = getValveRouteInfo(node, component);
@@ -164,19 +303,21 @@ const FluidPowerLabPage = () => {
     hydraulic: createWorkspace(),
     pneumatic: createWorkspace(),
   });
+  const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
   const canvasRef = useRef(null);
 
   const workspace = workspaces[domain];
   const domainMeta = getDomainMeta(domain);
   const groups = useMemo(() => paletteGroups(domain, search), [domain, search]);
+  const hasSearch = search.trim().length > 0;
 
-  const updateWorkspace = (updater) => {
+  const updateWorkspace = useCallback((updater) => {
     setWorkspaces((current) => ({
       ...current,
       [domain]: updater(current[domain]),
     }));
-  };
+  }, [domain]);
 
   const refreshPaths = (nodes, connections) =>
     connections.map((connection) => {
@@ -194,6 +335,8 @@ const FluidPowerLabPage = () => {
       const points = computeConnectionPath(
         getPortPosition(fromNode, fromComponent, fromPort),
         getPortPosition(toNode, toComponent, toPort),
+        fromPort,
+        toPort,
       );
 
       return {
@@ -248,15 +391,15 @@ const FluidPowerLabPage = () => {
           }
 
           const component = getComponentDefinition(node.componentId);
-          const maxX = CANVAS_WIDTH - component.defaultSize.width - 16;
-          const maxY = CANVAS_HEIGHT - component.defaultSize.height - 16;
+          const maxX = CANVAS_WIDTH - component.defaultSize.width - CANVAS_PADDING;
+          const maxY = CANVAS_HEIGHT - component.defaultSize.height - CANVAS_PADDING;
           const x = snap(event.clientX - canvasRect.left - draggingNode.offsetX);
           const y = snap(event.clientY - canvasRect.top - draggingNode.offsetY);
 
           return {
             ...node,
-            x: Math.min(Math.max(16, x), maxX),
-            y: Math.min(Math.max(16, y), maxY),
+            x: Math.min(Math.max(CANVAS_PADDING, x), maxX),
+            y: Math.min(Math.max(CANVAS_PADDING, y), maxY),
           };
         });
 
@@ -279,7 +422,7 @@ const FluidPowerLabPage = () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [draggingNode, domain]);
+  }, [draggingNode, domain, updateWorkspace]);
 
   const handleNodePointerDown = (event, node) => {
     if (event.target.closest('[data-port-button="true"]') || event.target.closest('button')) {
@@ -302,14 +445,25 @@ const FluidPowerLabPage = () => {
     event.preventDefault();
     const componentId = event.dataTransfer.getData('text/fluid-component');
     const rect = canvasRef.current?.getBoundingClientRect();
-    if (!componentId || !rect) {
+    const component = getComponentDefinition(componentId);
+    if (!componentId || !component || !rect) {
       return;
     }
 
     addNode(componentId, {
-      x: event.clientX - rect.left - 88,
-      y: event.clientY - rect.top - 48,
+      x: event.clientX - rect.left - component.defaultSize.width / 2,
+      y: event.clientY - rect.top - component.defaultSize.height / 2,
     });
+  };
+
+  const toggleGroup = (groupId) => {
+    setExpandedGroups((current) => ({
+      ...current,
+      [domain]: {
+        ...current[domain],
+        [groupId]: !current[domain]?.[groupId],
+      },
+    }));
   };
 
   const handlePortClick = (node, component, port) => {
@@ -395,6 +549,8 @@ const FluidPowerLabPage = () => {
         pathPoints: computeConnectionPath(
           getPortPosition(fromNode, fromComponent, fromPort),
           getPortPosition(toNode, toComponent, toPort),
+          fromPort,
+          toPort,
         ),
       };
 
@@ -505,7 +661,7 @@ const FluidPowerLabPage = () => {
   };
 
   return (
-    <section className="features-section cycle-page">
+    <section className="features-section cycle-page fluid-power-page">
       <div className="section-header">
         <div className="section-badge">Nuova sezione didattica</div>
         <h2 className="section-title">
@@ -528,6 +684,15 @@ const FluidPowerLabPage = () => {
 
       <div className="fluid-page-layout">
         <aside className="fluid-sidebar glass">
+          <div className="fluid-sidebar-intro">
+            <div>
+              <div className="section-subtitle">Catalogo componenti</div>
+              <p className="section-note">
+                Palette piu compatta e divisa per famiglie per comporre lo schema con meno scroll.
+              </p>
+            </div>
+          </div>
+
           <div className="fluid-domain-tabs">
             {FLUID_POWER_DOMAINS.map((item) => (
               <button
@@ -569,36 +734,63 @@ const FluidPowerLabPage = () => {
 
           <div className="fluid-palette-groups">
             {groups.map((group) => (
-              <div key={group.id} className="fluid-palette-group">
-                <div className="section-subtitle">{group.label}</div>
-                <div className="fluid-palette-list">
-                  {group.items.map((component) => (
-                    <div
-                      key={component.id}
-                      className="fluid-palette-card glass"
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData('text/fluid-component', component.id);
-                        event.dataTransfer.effectAllowed = 'copy';
-                      }}
-                    >
-                      <FluidPowerSymbol component={component} />
-                      <div className="fluid-palette-copy">
-                        <h3 className="card-title">{component.label}</h3>
-                        <p className="card-description">{component.description}</p>
-                      </div>
-                      <button
-                        className="btn-outline fluid-palette-btn"
-                        onClick={() => addNode(component.id)}
-                        aria-label={`Aggiungi ${component.label}`}
-                      >
-                        Aggiungi
-                      </button>
+              <div key={group.id} className="fluid-palette-group glass">
+                <button
+                  type="button"
+                  className="fluid-palette-group-toggle"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={hasSearch ? true : expandedGroups[domain]?.[group.id] ?? false}
+                >
+                  <div className="fluid-palette-group-copy">
+                    <div className="fluid-palette-group-topline">
+                      <span className="section-subtitle">{group.label}</span>
+                      <span className="fluid-palette-count">{group.items.length}</span>
                     </div>
-                  ))}
-                </div>
+                    <p className="section-note">{CATEGORY_COPY[group.id]}</p>
+                  </div>
+                  <ChevronDown
+                    size={18}
+                    className={`fluid-palette-chevron ${
+                      hasSearch || expandedGroups[domain]?.[group.id] ? 'fluid-palette-chevron-open' : ''
+                    }`}
+                  />
+                </button>
+
+                {(hasSearch || expandedGroups[domain]?.[group.id]) && (
+                  <div className="fluid-palette-list">
+                    {group.items.map((component) => (
+                      <div
+                        key={component.id}
+                        className="fluid-palette-card glass"
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('text/fluid-component', component.id);
+                          event.dataTransfer.effectAllowed = 'copy';
+                        }}
+                      >
+                        <FluidPowerSymbol component={component} className="fluid-symbol-palette" />
+                        <div className="fluid-palette-copy">
+                          <h3 className="card-title">{component.label}</h3>
+                          <p className="card-description">{component.description}</p>
+                        </div>
+                        <button
+                          className="btn-outline fluid-palette-btn"
+                          onClick={() => addNode(component.id)}
+                          aria-label={`Aggiungi ${component.label}`}
+                        >
+                          Aggiungi
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
+            {groups.length === 0 && (
+              <div className="fluid-palette-empty glass">
+                Nessun componente trovato per la ricerca corrente.
+              </div>
+            )}
           </div>
         </aside>
 
@@ -652,105 +844,140 @@ const FluidPowerLabPage = () => {
             <div
               ref={canvasRef}
               className="fluid-canvas"
+              style={{
+                '--fluid-canvas-width': `${CANVAS_WIDTH}px`,
+                '--fluid-canvas-height': `${CANVAS_HEIGHT}px`,
+                '--fluid-active-color': domainMeta.activeColor,
+                '--fluid-accent-color': domainMeta.accent,
+              }}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleCanvasDrop}
             >
-              <svg className="fluid-connections-layer" viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
-                {workspace.connections.map((connection) => {
-                  const isActive = workspace.snapshot.activeConnections.includes(connection.id);
-                  const isMechanical = connection.kind === 'mechanical';
+              <div className="fluid-canvas-stage">
+                <svg className="fluid-connections-layer" viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
+                  <defs>
+                    <marker
+                      id={`fluid-active-arrow-${domain}`}
+                      markerWidth="10"
+                      markerHeight="10"
+                      refX="8"
+                      refY="5"
+                      orient="auto"
+                    >
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill={domainMeta.activeColor} />
+                    </marker>
+                  </defs>
+                  {workspace.connections.map((connection) => {
+                    const isActive = workspace.snapshot.activeConnections.includes(connection.id);
+                    const isMechanical = connection.kind === 'mechanical';
+                    const isSelected =
+                      workspace.selectedEntity?.type === 'connection' &&
+                      workspace.selectedEntity.id === connection.id;
+
+                    return (
+                      <path
+                        key={connection.id}
+                        d={pointsToPath(connection.pathPoints)}
+                        className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
+                        markerEnd={
+                          isActive && !isMechanical ? `url(#fluid-active-arrow-${domain})` : undefined
+                        }
+                        onClick={() =>
+                          updateWorkspace((current) => ({
+                            ...current,
+                            selectedEntity: { type: 'connection', id: connection.id },
+                          }))
+                        }
+                      />
+                    );
+                  })}
+                </svg>
+
+                {workspace.nodes.map((node) => {
+                  const component = getComponentDefinition(node.componentId);
                   const isSelected =
-                    workspace.selectedEntity?.type === 'connection' &&
-                    workspace.selectedEntity.id === connection.id;
+                    workspace.selectedEntity?.type === 'node' && workspace.selectedEntity.id === node.instanceId;
+                  const isActive = workspace.snapshot.activeNodes.includes(node.instanceId);
+                  const motionState =
+                    workspace.snapshot.isRunning && isActive
+                      ? workspace.snapshot.actuatorAction ?? 'flow'
+                      : null;
 
                   return (
-                    <path
-                      key={connection.id}
-                      d={pointsToPath(connection.pathPoints)}
-                      className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
+                    <div
+                      key={node.instanceId}
+                      className={`fluid-node glass ${isSelected ? 'fluid-node-selected' : ''} ${isActive ? 'fluid-node-active' : ''}`}
+                      style={{
+                        width: component.defaultSize.width,
+                        height: component.defaultSize.height,
+                        left: node.x,
+                        top: node.y,
+                      }}
+                      onPointerDown={(event) => handleNodePointerDown(event, node)}
                       onClick={() =>
                         updateWorkspace((current) => ({
                           ...current,
-                          selectedEntity: { type: 'connection', id: connection.id },
+                          selectedEntity: { type: 'node', id: node.instanceId },
                         }))
                       }
-                    />
+                    >
+                      <div className="fluid-node-header">
+                        <span className="fluid-node-title">{node.label}</span>
+                        {component.simBehavior.kind === 'valve' && (
+                          <button
+                            className="fluid-node-toggle"
+                            onClick={() => toggleValve(node.instanceId)}
+                            aria-label={`Commuta ${node.label}`}
+                          >
+                            {describeActuatorState(node, component)}
+                          </button>
+                        )}
+                      </div>
+                      <FluidPowerSymbol
+                        component={component}
+                        active={isActive}
+                        label={node.label}
+                        motionState={motionState}
+                      />
+                      {component.ports.map((port) => {
+                        const position = getPortPosition(node, component, port);
+                        const portKey = `${node.instanceId}:${port.id}`;
+                        const isPortActive = workspace.snapshot.activePorts.includes(portKey);
+                        const isPending =
+                          workspace.pendingPort?.nodeId === node.instanceId &&
+                          workspace.pendingPort?.portId === port.id;
+
+                        return (
+                          <button
+                            key={port.id}
+                            type="button"
+                            data-port-button="true"
+                            className={`fluid-port fluid-port-side-${port.side} fluid-port-kind-${port.kind} ${
+                              isPortActive ? 'fluid-port-active' : ''
+                            } ${isPending ? 'fluid-port-pending' : ''}`}
+                            style={{ left: position.x - node.x - 9, top: position.y - node.y - 9 }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handlePortClick(node, component, port);
+                            }}
+                            aria-label={`Porta ${port.label} di ${node.label}`}
+                          >
+                            <span className="fluid-port-tail" aria-hidden="true" />
+                            <span className="fluid-port-label" aria-hidden="true">{port.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
-              </svg>
 
-              {workspace.nodes.map((node) => {
-                const component = getComponentDefinition(node.componentId);
-                const isSelected =
-                  workspace.selectedEntity?.type === 'node' && workspace.selectedEntity.id === node.instanceId;
-                const isActive = workspace.snapshot.activeNodes.includes(node.instanceId);
-
-                return (
-                  <div
-                    key={node.instanceId}
-                    className={`fluid-node glass ${isSelected ? 'fluid-node-selected' : ''} ${isActive ? 'fluid-node-active' : ''}`}
-                    style={{
-                      width: component.defaultSize.width,
-                      height: component.defaultSize.height,
-                      left: node.x,
-                      top: node.y,
-                    }}
-                    onPointerDown={(event) => handleNodePointerDown(event, node)}
-                    onClick={() =>
-                      updateWorkspace((current) => ({
-                        ...current,
-                        selectedEntity: { type: 'node', id: node.instanceId },
-                      }))
-                    }
-                  >
-                    <div className="fluid-node-header">
-                      <span className="fluid-node-title">{node.label}</span>
-                      {component.simBehavior.kind === 'valve' && (
-                        <button
-                          className="fluid-node-toggle"
-                          onClick={() => toggleValve(node.instanceId)}
-                          aria-label={`Commuta ${node.label}`}
-                        >
-                          {describeActuatorState(node, component)}
-                        </button>
-                      )}
-                    </div>
-                    <FluidPowerSymbol component={component} active={isActive} label={node.label} />
-                    {component.ports.map((port) => {
-                      const position = getPortPosition(node, component, port);
-                      const portKey = `${node.instanceId}:${port.id}`;
-                      const isPortActive = workspace.snapshot.activePorts.includes(portKey);
-                      const isPending =
-                        workspace.pendingPort?.nodeId === node.instanceId &&
-                        workspace.pendingPort?.portId === port.id;
-
-                      return (
-                        <button
-                          key={port.id}
-                          type="button"
-                          data-port-button="true"
-                          className={`fluid-port ${isPortActive ? 'fluid-port-active' : ''} ${isPending ? 'fluid-port-pending' : ''}`}
-                          style={{ left: position.x - node.x - 8, top: position.y - node.y - 8 }}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handlePortClick(node, component, port);
-                          }}
-                          aria-label={`Porta ${port.label} di ${node.label}`}
-                        >
-                          <span>{port.label}</span>
-                        </button>
-                      );
-                    })}
+                {workspace.nodes.length === 0 && (
+                  <div className="fluid-empty-state">
+                    <Activity size={44} className="empty-icon" />
+                    <p>Il canvas e vuoto. Trascina un componente dalla sinistra oppure usa il pulsante "Aggiungi".</p>
                   </div>
-                );
-              })}
-
-              {workspace.nodes.length === 0 && (
-                <div className="fluid-empty-state">
-                  <Activity size={44} className="empty-icon" />
-                  <p>Il canvas e vuoto. Trascina un componente dalla sinistra oppure usa il pulsante "Aggiungi".</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
