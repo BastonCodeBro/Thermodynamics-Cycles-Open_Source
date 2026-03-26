@@ -27,6 +27,11 @@ const StateExamsPage = () => {
   const selectedDiagram = selectedExam ? examDiagramMeta[selectedExam.id] ?? null : null;
 
   const handleDownload = async (exam) => {
+    if (exam.solvedPdf) {
+      window.open(exam.solvedPdf, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     setDownloadingId(exam.id);
     try {
       await exportExamToPDF({

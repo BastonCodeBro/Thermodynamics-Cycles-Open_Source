@@ -6,6 +6,7 @@ export const stateExams = [
     shortTitle: 'A056 Ordinaria 2025',
     headline: 'Nave da carico con motore diesel 2T a corsa extra lunga',
     sourcePdf: '/esami/originali/A056_ORD25.pdf',
+    solvedPdf: '/esami/Svolti/A056_ORD25%20SOLUZIONE%20-%20Meccanica_e_Macchine_Soluzioni_d_Esame.pdf',
     trace: [
       'Una moderna nave da carico e propulsa da un motore diesel a 2 tempi a corsa extra lunga che imprime 15 nodi. Dati noti: alesaggio 840 mm, 6 cilindri, regime 80 giri/min.',
       'Richieste di prima parte: potenza utilizzabile per la propulsione, portata di vapore prodotta dalla caldaia a gas di scarico, consumo di combustibile per miglio, capacita dei depositi HFO per un autonomia di 15.000 miglia.',
@@ -94,6 +95,7 @@ export const stateExams = [
     shortTitle: 'A056 Ordinaria 2024',
     headline: 'Propulsione COGAG su nave militare',
     sourcePdf: '/esami/originali/A056_ORD24.pdf',
+    solvedPdf: '/esami/Svolti/A056_ORD24%20SOLUZIONE%20-%202024_COGAG_Propulsion_Resolution.pdf',
     trace: [
       'Nave militare con propulsione turbo-riduttrice COGAG composta da quattro turbine a gas, potenza complessiva 78 MW, velocita massima 25 nodi.',
       'Dati noti: dislocamento 30.000 t, autonomia 8.000 miglia a 15 nodi, consumo orario di combustibile 19.000 kg/h.',
@@ -178,6 +180,7 @@ export const stateExams = [
     shortTitle: 'A056 Ordinaria 2023',
     headline: 'Petroliera con doppio diesel lento e pompe di carico',
     sourcePdf: '/esami/originali/A056_ORD23.pdf',
+    solvedPdf: '/esami/Svolti/A056_ORD23%20SOLUZIONE%20-%20Naval_Engineering_Case_Study_Tanker_Analysis.pdf',
     trace: [
       'Petroliera monoelica con due motori diesel due tempi a corsa super lunga. Ogni motore ha 12 cilindri, 650 kW per cilindro a 150 rpm e pme pari a 12 bar.',
       'Ogni cisterna di carico contiene 1.000 m3 di greggio; le operazioni di scarico usano due pompe centrifughe con prevalenza 100 m e tubazioni da 300 mm. Una cisterna va scaricata in un ora.',
@@ -260,6 +263,7 @@ export const stateExams = [
     shortTitle: 'A009 Ordinaria 2019',
     headline: 'Nave da crociera con apparato propulsivo tradizionale',
     sourcePdf: '/esami/originali/A009_ORD19.pdf',
+    solvedPdf: '/esami/Svolti/A009_ORD19%20SOLUZIONE%20-%20Propulsione_e_Sistemi_Ausiliari_Navali.pdf',
     trace: [
       'Nave da crociera da 28.000 t con potenza complessiva di propulsione pari a 35.000 kW.',
       'La prova chiede numero e disposizione dei motori, dimensionamento, produzione massima di acqua calda sanitaria dal recupero sui gas di scarico, consumo orario di combustibile e rendimento termico effettivo.',
@@ -339,6 +343,7 @@ export const stateExams = [
     shortTitle: 'I159 Ordinaria 2018',
     headline: 'LNG carrier con propulsione elettrica e turbine a gas',
     sourcePdf: '/esami/originali/I159_ORD18.pdf',
+    solvedPdf: '/esami/Svolti/I159_ORD18%20SOLUZIONE%20-%20LNG_Carrier_Propulsion_Analysis.pdf',
     trace: [
       'LNG carrier con due azipod da 24.000 kW complessivi; generazione elettrica affidata a tre gruppi turbina a gas alternatore da 36.000 kW complessivi.',
       'Dati del ciclo: T1 = 20 C, T3 = 1050 C, rapporto di compressione beta = 16, consumo specifico 0,225 kg/kWh, PCI metano 50.000 kJ/kg.',
