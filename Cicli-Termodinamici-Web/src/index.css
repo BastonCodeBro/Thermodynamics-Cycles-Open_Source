@@ -2123,14 +2123,29 @@ p { margin: 0; }
 }
 
 .fluid-connection-active {
-  stroke: var(--fluid-active-color, #22D3EE);
-  animation: fluidFlow 1.6s linear infinite;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--fluid-active-color, #22D3EE) 38%, transparent));
+  stroke: var(--fluid-active-color, #F97316);
+  stroke-dasharray: 10 6;
+  animation: fluidFlow 0.8s linear infinite;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--fluid-active-color, #F97316) 40%, transparent));
+}
+
+.fluid-connection-lowpressure {
+  stroke: #38BDF8;
+  stroke-dasharray: 10 6;
+  animation: fluidFlowLow 1.2s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.3));
 }
 
 .fluid-connection-mechanical {
   stroke: rgba(148, 163, 184, 0.95);
   stroke-dasharray: 10 6;
+}
+
+.fluid-connection-mechanical-active {
+  stroke: #94A3B8;
+  stroke-dasharray: 8 6;
+  animation: fluidMechSpin 0.4s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.35));
 }
 
 .fluid-connection-selected {
@@ -2139,8 +2154,18 @@ p { margin: 0; }
 }
 
 @keyframes fluidFlow {
-  from { stroke-opacity: 0.85; }
-  to { stroke-opacity: 1; }
+  from { stroke-dashoffset: 32; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes fluidFlowLow {
+  from { stroke-dashoffset: 32; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes fluidMechSpin {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
 }
 
 .fluid-node {
@@ -2821,8 +2846,9 @@ p { margin: 0; }
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  animation: fluidSymbolFlow 1.1s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.2));
+  stroke-dasharray: 8 5;
+  animation: fluidSymbolFlow 0.7s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.35));
 }
 
 .fluid-symbol-rotor,

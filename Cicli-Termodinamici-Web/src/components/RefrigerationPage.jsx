@@ -214,7 +214,7 @@ const RefrigerationPage = () => {
         domePh: domeFull.ph,
       });
     } catch (calculationError) {
-      setError('Controlla il salto termico tra evaporazione e condensazione: il ciclo deve avere una sorgente calda piu alta della fredda e stati fisicamente accessibili per il refrigerante scelto.');
+      setError('Controlla il salto termico tra evaporazione e condensazione: il ciclo deve avere una sorgente calda più alta della fredda e stati fisicamente accessibili per il refrigerante scelto.');
       console.error(calculationError);
     } finally {
       setLoading(false);
@@ -343,11 +343,11 @@ const RefrigerationPage = () => {
         takeaways: mode === 'heat-pump'
           ? [
             'La pompa di calore valorizza il lato caldo: guarda qH e COP_HP.',
-            'Il compressore sposta il fluido su un livello di pressione che permette la cessione di calore all ambiente da riscaldare.',
+            'Il compressore sposta il fluido su un livello di pressione che permette la cessione di calore all\'ambiente da riscaldare.',
             'Un salto termico troppo grande tra evaporazione e condensazione penalizza subito il COP.',
           ]
           : [
-            'Nel frigorifero il lato utile e l evaporatore: per questo conta qL.',
+            'Nel frigorifero il lato utile è l\'evaporatore: per questo conta qL.',
             'Surriscaldamento e sottoraffreddamento cambiano le posizioni dei punti 1 e 3 sul diagramma P-h.',
             'Il punto 2s ti aiuta a leggere quanto la compressione reale si allontana da quella ideale.',
           ],
@@ -363,8 +363,8 @@ const RefrigerationPage = () => {
       <h3 className="card-title">Parametri refrigerante</h3>
       <p className="input-hint">
         {mode === 'heat-pump'
-          ? 'Qui il lato utile e il condensatore: guarda soprattutto temperatura di condensazione, COP_HP e potenza termica resa.'
-          : 'Qui il lato utile e l evaporatore: temperatura di evaporazione, surriscaldamento e COP spiegano quasi tutto il comportamento del ciclo.'}
+          ? 'Qui il lato utile è il condensatore: guarda soprattutto temperatura di condensazione, COP_HP e potenza termica resa.'
+          : 'Qui il lato utile è l\'evaporatore: temperatura di evaporazione, surriscaldamento e COP spiegano quasi tutto il comportamento del ciclo.'}
       </p>
       <div className="inputs-grid">
         <div className="input-field">

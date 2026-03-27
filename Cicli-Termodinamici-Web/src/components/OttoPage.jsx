@@ -55,9 +55,9 @@ const presets = [
 
 const insights = {
   takeaways: [
-    'A parita di T massima il rapporto di compressione e la leva principale sul rendimento ideale.',
-    'Il divario tra 2-2s e 4-4s mostra subito l effetto delle irreversibilita.',
-    'Nel ciclo Otto l apporto di calore avviene a volume costante: confrontalo con Diesel e Duale.',
+    'A parità di T massima il rapporto di compressione è la leva principale sul rendimento ideale.',
+    'Il divario tra 2-2s e 4-4s mostra subito l\'effetto delle irreversibilità.',
+    'Nel ciclo Otto l\'apporto di calore avviene a volume costante: confrontalo con Diesel e Duale.',
   ],
   commonMistake: 'Confondere il rapporto di compressione con il rapporto di pressione: qui conta il rapporto tra i volumi del cilindro.',
 };
@@ -147,10 +147,10 @@ const OttoPage = () => {
           ],
           formulas: [
             { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
-            { label: '1 -> 2', latex: 'Compressione reale con v_2 = \\frac{v_1}{r}' },
-            { label: '2 -> 3', latex: 'Apporto di calore a volume costante' },
-            { label: '3 -> 4', latex: 'Espansione reale fino a v_4 = v_1' },
-            { label: '4 -> 1', latex: 'Cessione di calore a volume costante' },
+            { label: '1 → 2', description: 'Compressione reale con', latex: 'v_2 = \\frac{v_1}{r}' },
+            { label: '2 → 3', description: 'Apporto di calore a volume costante' },
+            { label: '3 → 4', description: 'Espansione reale fino a', latex: 'v_4 = v_1' },
+            { label: '4 → 1', description: 'Cessione di calore a volume costante' },
             { label: 'Calore in ingresso', latex: 'q_{in} = c_v (T_3 - T_2)', value: cycle.stats.q_in },
             { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
             { label: 'Rendimento ideale', latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}', value: cycle.stats.eta_ideal, display: true },
@@ -184,7 +184,7 @@ const OttoPage = () => {
         <>
           <h3 className="card-title">Parametri motore</h3>
           <p className="input-hint">
-            Parti da r e dalla temperatura massima: nel ciclo Otto la combustione e isocora, quindi il confronto con Diesel e Duale si legge bene gia dai punti 2, 3 e 4.
+            Parti da r e dalla temperatura massima: nel ciclo Otto la combustione è isocora, quindi il confronto con Diesel e Duale si legge bene già dai punti 2, 3 e 4.
           </p>
           <div className="inputs-grid">
             <InputField label="Rapporto di compressione" value={values.r} onChange={(value) => updateInputs((prev) => ({ ...prev, r: value }))} accent={accentColor} />

@@ -169,10 +169,10 @@ const CarnotPage = () => {
             { label: 'COP pompa di calore', latex: 'COP_{HP} = \\frac{Q_H}{W_{in}}', value: cycle.stats.cop_hp, display: true },
           ]
           : [
-            { label: '1 -> 2', latex: 'Espansione isoterma a T_H' },
-            { label: '2 -> 3', latex: 'Espansione isentropica' },
-            { label: '3 -> 4', latex: 'Compressione isoterma a T_L' },
-            { label: '4 -> 1', latex: 'Compressione isentropica' },
+            { label: '1 → 2', description: 'Espansione isoterma a', latex: 'T_H' },
+            { label: '2 → 3', description: 'Espansione isentropica' },
+            { label: '3 → 4', description: 'Compressione isoterma a', latex: 'T_L' },
+            { label: '4 → 1', description: 'Compressione isentropica' },
             { label: 'Calore assorbito', latex: 'Q_{in} = T_H \\cdot \\Delta s', value: cycle.stats.Q_in },
             { label: 'Calore ceduto', latex: 'Q_{out} = T_L \\cdot \\Delta s', value: cycle.stats.Q_out },
             { label: 'Lavoro netto', latex: 'W_{net} = Q_{in} - Q_{out}', value: cycle.stats.W_net },
@@ -234,7 +234,7 @@ const CarnotPage = () => {
       insights={{
         takeaways: activeModeSummary(mode),
         commonMistake: mode === 'reverse'
-          ? 'Confrontare il COP reale con il rendimento di un motore: il COP e un rapporto diverso e puo essere maggiore di 1.'
+          ? 'Confrontare il COP reale con il rendimento di un motore: il COP è un rapporto diverso e può essere maggiore di 1.'
           : 'Usare gradi Celsius nella formula del rendimento: Carnot richiede sempre temperature assolute.',
       }}
       legendItems={[
@@ -250,13 +250,13 @@ const activeModeSummary = (mode) => (
   mode === 'reverse'
     ? [
       'Ridurre il salto termico tra sorgente calda e fredda aumenta subito il COP teorico.',
-      'Il Carnot inverso fornisce un riferimento massimo: nessun frigorifero reale puo superarlo.',
-      'Confronta COP_R e COP_HP per capire se stai guardando il lato freddo o il lato caldo dell impianto.',
+      'Il Carnot inverso fornisce un riferimento massimo: nessun frigorifero reale può superarlo.',
+      'Confronta COP_R e COP_HP per capire se stai guardando il lato freddo o il lato caldo dell\'impianto.',
     ]
     : [
       'Il rendimento cresce se T_H aumenta o se T_L diminuisce.',
       'I tratti isentropici chiudono il ciclo senza scambio termico.',
-      'Carnot e il riferimento teorico da usare per leggere quanto un ciclo reale e lontano dal limite.',
+      'Carnot è il riferimento teorico da usare per leggere quanto un ciclo reale è lontano dal limite.',
     ]
 );
 

@@ -130,8 +130,8 @@ const DualPage = () => {
             { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
             { label: 'Rapporto di pressione isocora', latex: '\\alpha = \\frac{P_3}{P_2}', value: values.alpha },
             { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_4}{v_3}', value: values.rc },
-            { label: '2 -> 3', latex: 'Apporto di calore a volume costante' },
-            { label: '3 -> 4', latex: 'Apporto di calore a pressione costante' },
+            { label: '2 → 3', description: 'Apporto di calore a volume costante' },
+            { label: '3 → 4', description: 'Apporto di calore a pressione costante' },
             { label: 'Calore isocoro', latex: 'q_{cv} = c_v (T_3 - T_2)', value: cycle.stats.q_in_cv },
             { label: 'Calore isobaro', latex: 'q_{cp} = c_p (T_4 - T_3)', value: cycle.stats.q_in_cp },
             { label: 'Calore totale', latex: 'q_{in} = q_{cv} + q_{cp}', value: cycle.stats.q_in },
@@ -176,9 +176,9 @@ const DualPage = () => {
         takeaways: [
           'Il Duale somma una fase isocora e una isobara: per questo cade tra Otto e Diesel.',
           'Separare q_cv e q_cp aiuta a capire quanto della combustione avviene vicino al PMS.',
-          'A parita di r, aumentare alpha intensifica la quota isocora mentre rc allunga la parte isobara.',
+          'A parità di r, aumentare alpha intensifica la quota isocora mentre rc allunga la parte isobara.',
         ],
-        commonMistake: 'Usare alpha e rc come se controllassero la stessa cosa: alpha agisce sul salto di pressione isocoro, rc sull estensione della fase isobara.',
+        commonMistake: 'Usare alpha e rc come se controllassero la stessa cosa: alpha agisce sul salto di pressione isocoro, rc sull\'estensione della fase isobara.',
       }}
       legendItems={[
         { label: 'Calore isocoro', color: '#F97316' },

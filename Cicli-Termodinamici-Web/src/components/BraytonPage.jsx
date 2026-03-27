@@ -190,10 +190,10 @@ const BraytonPage = () => {
           ]
           : [
             { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
-            { label: '1 -> 2', latex: 'Compressione politropica reale nel compressore' },
-            { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
-            { label: '3 -> 4', latex: 'Espansione politropica reale in turbina' },
-            { label: '4 -> 1', latex: 'Cessione di calore a pressione costante' },
+            { label: '1 → 2', description: 'Compressione politropica reale nel compressore' },
+            { label: '2 → 3', description: 'Apporto di calore a pressione costante' },
+            { label: '3 → 4', description: 'Espansione politropica reale in turbina' },
+            { label: '4 → 1', description: 'Cessione di calore a pressione costante' },
             { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: cycle.stats.wc },
             { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: cycle.stats.wt },
             { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
@@ -238,7 +238,7 @@ const BraytonPage = () => {
           <p className="input-hint">
             {activeMode === 'regenerative'
               ? 'Nel Brayton rigenerativo controlla soprattutto il rapporto tra T4 e T2: il recupero funziona solo se i gas in uscita turbina restano abbastanza caldi.'
-              : 'Nel Brayton semplice il punto chiave e il compromesso tra lavoro di turbina, lavoro di compressore e calore richiesto nel combustore.'}
+              : 'Nel Brayton semplice il punto chiave è il compromesso tra lavoro di turbina, lavoro di compressore e calore richiesto nel combustore.'}
           </p>
           <div className="inputs-grid">
             <InputField label="Pressione iniziale" value={values.p_low} onChange={(value) => updateInputs((prev) => ({ ...prev, p_low: value }))} unit="bar" accent={accentColor} />
@@ -263,7 +263,7 @@ const BraytonPage = () => {
       presets={presetMap[mode]}
       insights={{
         takeaways: [
-          'Nel Brayton semplice il lavoro netto e la differenza tra turbina e compressore.',
+          'Nel Brayton semplice il lavoro netto è la differenza tra turbina e compressore.',
           'Un BWR alto significa che il compressore sta mangiando molta della potenza prodotta.',
           mode === 'regenerative'
             ? 'La rigenerazione riduce il combustibile richiesto ma solo se T4 rimane sopra T2.'

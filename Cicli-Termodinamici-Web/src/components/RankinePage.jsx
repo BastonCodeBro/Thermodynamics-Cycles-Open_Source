@@ -89,10 +89,10 @@ const buildFormulas = (stats, variant, values) => {
 
   if (variant === 'simple') {
     return [
-      { label: '1 -> 2', latex: 'Compressione del liquido in pompa' },
-      { label: '2 -> 3', latex: 'Riscaldamento ed evaporazione fino a vapore saturo secco' },
-      { label: '3 -> 4', latex: 'Espansione reale in turbina' },
-      { label: '4 -> 1', latex: 'Condensazione a pressione quasi costante' },
+      { label: '1 → 2', description: 'Compressione del liquido in pompa' },
+      { label: '2 → 3', description: 'Riscaldamento ed evaporazione fino a vapore saturo secco' },
+      { label: '3 → 4', description: 'Espansione reale in turbina' },
+      { label: '4 → 1', description: 'Condensazione a pressione quasi costante' },
       ...base,
     ];
   }
@@ -100,8 +100,8 @@ const buildFormulas = (stats, variant, values) => {
   if (variant === 'hirn') {
     return [
       { label: 'Temperatura vapore vivo', latex: 'T_3 = T_{max}', value: values.t_max, unit: 'degC' },
-      { label: '2 -> 3', latex: 'Caldaia con surriscaldamento finale del vapore' },
-      { label: '3 -> 4', latex: 'Espansione reale dalla zona surriscaldata' },
+      { label: '2 → 3', description: 'Caldaia con surriscaldamento finale del vapore' },
+      { label: '3 → 4', description: 'Espansione reale dalla zona surriscaldata' },
       ...base,
     ];
   }
@@ -444,24 +444,24 @@ const RankinePage = () => {
       insights={{
         takeaways: variant === 'reheat'
           ? [
-              'Il reheat aggiunge calore tra due espansioni e mantiene piu alta la qualita del vapore nel tratto finale.',
+              'Il reheat aggiunge calore tra due espansioni e mantiene più alta la qualità del vapore nel tratto finale.',
               'Osserva come cambiano i punti 4, 5 e 6 sul diagramma T-s: qui si legge davvero il vantaggio didattico del reheat.',
               'La potenza netta cresce quando la seconda espansione sfrutta bene il nuovo apporto di calore.',
             ]
           : variant === 'hirn'
             ? [
-                'Il surriscaldamento sposta il punto 3 fuori dalla cupola e rende piu sicura l espansione in turbina.',
+                'Il surriscaldamento sposta il punto 3 fuori dalla cupola e rende più sicura l\'espansione in turbina.',
                 'Confronta Hirn con Rankine semplice per vedere come cambiano lavoro di turbina e calore in caldaia.',
                 'La pompa incide poco sul bilancio energetico ma va comunque letta nel rendimento globale.',
               ]
             : [
-                'Il Rankine semplice e il riferimento da cui partire per leggere tutte le varianti reali del ciclo a vapore.',
-                'Il tratto 4 -> 1 rappresenta la chiusura al condensatore e chiarisce dove si scarica il calore verso l ambiente.',
-                'Il lavoro pompa e piccolo rispetto al lavoro turbina, ma non nullo.',
+                'Il Rankine semplice è il riferimento da cui partire per leggere tutte le varianti reali del ciclo a vapore.',
+                'Il tratto 4 → 1 rappresenta la chiusura al condensatore e chiarisce dove si scarica il calore verso l\'ambiente.',
+                'Il lavoro pompa è piccolo rispetto al lavoro turbina, ma non nullo.',
               ],
         commonMistake: variant === 'reheat'
           ? 'Mettere la pressione di reheat sopra la pressione di caldaia o sotto quella di condensazione: fisicamente il secondo stadio va sempre fra le due.'
-          : 'Confondere il Rankine semplice con l Hirn: nel semplice il punto 3 e vapore saturo secco, nell Hirn e vapore surriscaldato.',
+           : 'Confondere il Rankine semplice con l\'Hirn: nel semplice il punto 3 è vapore saturo secco, nell\'Hirn è vapore surriscaldato.',
       }}
       legendItems={[
         { label: 'Apporto di calore', color: '#EF4444' },
@@ -475,7 +475,7 @@ const RankinePage = () => {
         {variant === 'simple'
           ? 'Nel Rankine semplice il vapore entra in turbina come saturo secco: non serve fissare una temperatura massima.'
           : variant === 'hirn'
-            ? 'Nel ciclo Hirn aggiungi surriscaldamento in caldaia per migliorare l espansione in turbina.'
+            ? 'Nel ciclo Hirn aggiungi surriscaldamento in caldaia per migliorare l\'espansione in turbina.'
             : 'Nel reheat il vapore espande in due stadi con un nuovo apporto di calore alla pressione intermedia.'}
       </p>
       <div className="inputs-grid">

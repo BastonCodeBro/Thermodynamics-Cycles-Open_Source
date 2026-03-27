@@ -48,9 +48,9 @@ const DEFAULT_EXPANDED_GROUPS = [
 ];
 
 const CATEGORY_COPY = {
-  alimentazione: 'Sorgenti, ritorni e unita di servizio per alimentare correttamente il circuito.',
-  'valvole-distributrici': 'Organi di comando per indirizzare il flusso e cambiare il moto dell attuatore.',
-  utilizzatori: 'Cilindri e motori che trasformano l energia del fluido in lavoro utile.',
+  alimentazione: 'Sorgenti, ritorni e unità di servizio per alimentare correttamente il circuito.',
+  'valvole-distributrici': 'Organi di comando per indirizzare il flusso e cambiare il moto dell'attuatore.',
+  utilizzatori: 'Cilindri e motori che trasformano l'energia del fluido in lavoro utile.',
   ausiliari: 'Elementi di regolazione, protezione e logica per completare lo schema.',
   'strumentazione-e-comandi': 'Indicatori e comandi simbolici utili a leggere la funzione del circuito.',
   'simbologia-base': 'Segni grafici di supporto per ripassare la simbologia ISO del fluid power.',
@@ -375,15 +375,15 @@ const paletteGroups = (domain, search) => {
 const theoryCards = [
   {
     title: 'Oleodinamica',
-    body: 'Lavora ad alte pressioni, offre grande forza sugli attuatori ed e ideale per presse, timonerie, gru e macchine operatrici.',
+    body: 'Lavora ad alte pressioni, offre grande forza sugli attuatori ed è ideale per presse, timonerie, gru e macchine operatrici.',
   },
   {
     title: 'Pneumatica',
-    body: 'Usa aria compressa, risponde rapidamente ed e adatta ad automazioni, pick-and-place, serraggi e attuazioni leggere.',
+    body: 'Usa aria compressa, risponde rapidamente ed è adatta ad automazioni, pick-and-place, serraggi e attuazioni leggere.',
   },
   {
     title: 'Metodo di studio',
-    body: 'Individua sempre sorgente, regolazione, attuatore e ritorno: e la chiave per leggere sia lo schema simbolico sia il circuito reale.',
+    body: 'Individua sempre sorgente, regolazione, attuatore e ritorno: è la chiave per leggere sia lo schema simbolico sia il circuito reale.',
   },
 ];
 
@@ -539,9 +539,9 @@ const buildDidacticFeedback = (workspace, validation, domainMeta) => {
     return {
       verdict: 'Incompleto',
       tone: 'info',
-      summary: 'Lo schema e pronto, ma non e ancora stato avviato nella configurazione corrente.',
-      nextSuggestion: 'Avvia lo schema o commuta il distributore se vuoi vedere il movimento dell attuatore.',
-      flowExplanation: 'Il circuito contiene gia la catena minima: ora va verificata la direzione del flusso in simulazione.',
+      summary: 'Lo schema è pronto, ma non è ancora stato avviato nella configurazione corrente.',
+      nextSuggestion: 'Avvia lo schema o commuta il distributore se vuoi vedere il movimento dell'attuatore.',
+      flowExplanation: 'Il circuito contiene già la catena minima: ora va verificata la direzione del flusso in simulazione.',
     };
   }
 
@@ -550,7 +550,7 @@ const buildDidacticFeedback = (workspace, validation, domainMeta) => {
     tone: 'warning',
     summary: validation.warnings?.[0] ?? 'Completa la catena minima prima di avviare la simulazione.',
     nextSuggestion: 'Parti sempre da sorgente, distributore, utilizzatore e ritorno o scarico.',
-    flowExplanation: 'Finche manca uno di questi elementi il simulatore non puo chiudere il percorso del fluido.',
+    flowExplanation: 'Finché manca uno di questi elementi il simulatore non può chiudere il percorso del fluido.',
   };
 };
 
@@ -570,7 +570,7 @@ const buildInspector = (workspace) => {
     if (!connection) {
       return {
         title: 'Collegamento non disponibile',
-        subtitle: 'La selezione corrente non e piu presente nel canvas.',
+        subtitle: 'La selezione corrente non è più presente nel canvas.',
         rows: [],
         ports: [],
       };
@@ -602,7 +602,7 @@ const buildInspector = (workspace) => {
   if (!node || !component) {
     return {
       title: 'Componente non disponibile',
-      subtitle: 'La selezione corrente non e piu presente nel canvas.',
+      subtitle: 'La selezione corrente non è più presente nel canvas.',
       rows: [],
       ports: [],
     };
@@ -937,7 +937,7 @@ const FluidPowerLabPage = () => {
         return {
           ...current,
           pendingPort: null,
-          message: 'Ogni porta puo ospitare un solo collegamento nella prima versione del simulatore.',
+          message: 'Ogni porta può ospitare un solo collegamento nella prima versione del simulatore.',
         };
       }
 
@@ -945,7 +945,7 @@ const FluidPowerLabPage = () => {
         return {
           ...current,
           pendingPort: null,
-          message: 'Queste due porte sono gia collegate.',
+          message: 'Queste due porte sono già collegate.',
         };
       }
 
@@ -1145,7 +1145,7 @@ const FluidPowerLabPage = () => {
       });
       setStorageStatus('Progetto importato dal file JSON.');
     } catch {
-      setStorageStatus('Il file selezionato non e un progetto Fluid Power valido.');
+      setStorageStatus('Il file selezionato non è un progetto Fluid Power valido.');
     } finally {
       event.target.value = '';
     }
@@ -1161,7 +1161,7 @@ const FluidPowerLabPage = () => {
         <p className="hero-description fluid-page-description">
           {isStudentMode
             ? 'Costruisci un circuito, avvialo e capisci subito se il percorso del fluido funziona davvero.'
-            : 'Analizza il circuito con una vista tecnica piu ricca, mantenendo lo stesso editor e la stessa simulazione.'}
+            : 'Analizza il circuito con una vista tecnica più ricca, mantenendo lo stesso editor e la stessa simulazione.'}
         </p>
       </div>
 

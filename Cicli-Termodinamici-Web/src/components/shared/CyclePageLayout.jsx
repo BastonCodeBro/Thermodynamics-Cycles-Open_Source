@@ -39,7 +39,7 @@ const CyclePageLayout = ({
           <div className="cycle-top-left glass">
             {modeOptions.length > 0 && (
               <div className="mode-toggle-group">
-                <span className="section-subtitle">Modalita</span>
+                <span className="section-subtitle">Modalità</span>
                 <div className="mode-toggle-row">
                   {modeOptions.map((option) => (
                     <button

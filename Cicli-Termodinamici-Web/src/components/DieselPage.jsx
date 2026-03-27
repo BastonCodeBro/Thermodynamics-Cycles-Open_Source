@@ -55,11 +55,11 @@ const presets = [
 
 const insights = {
   takeaways: [
-    'Il rapporto di cut-off sposta durata e intensita del calore immesso a pressione costante.',
-    'A parita di r, aumentare rc abbassa il rendimento ideale ma puo contenere il picco di pressione.',
-    'Nel grafico P-v il tratto 2-3 orizzontale distingue subito il Diesel dall Otto.',
+    'Il rapporto di cut-off sposta durata e intensità del calore immesso a pressione costante.',
+    'A parità di r, aumentare rc abbassa il rendimento ideale ma può contenere il picco di pressione.',
+    'Nel grafico P-v il tratto 2-3 orizzontale distingue subito il Diesel dall\'Otto.',
   ],
-  commonMistake: 'Usare rc come se fosse un rapporto di compressione: rc e il rapporto tra i volumi durante la combustione isobara.',
+  commonMistake: 'Usare rc come se fosse un rapporto di compressione: rc è il rapporto tra i volumi durante la combustione isobara.',
 };
 
 const legendItems = [
@@ -148,10 +148,10 @@ const DieselPage = () => {
           formulas: [
             { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
             { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_3}{v_2}', value: values.rc },
-            { label: '1 -> 2', latex: 'Compressione reale' },
-            { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
-            { label: '3 -> 4', latex: 'Espansione reale' },
-            { label: '4 -> 1', latex: 'Cessione di calore a volume costante' },
+            { label: '1 → 2', description: 'Compressione reale' },
+            { label: '2 → 3', description: 'Apporto di calore a pressione costante' },
+            { label: '3 → 4', description: 'Espansione reale' },
+            { label: '4 → 1', description: 'Cessione di calore a volume costante' },
             { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
             { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
             { label: 'Rendimento ideale', latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}', value: cycle.stats.eta_ideal, display: true },
