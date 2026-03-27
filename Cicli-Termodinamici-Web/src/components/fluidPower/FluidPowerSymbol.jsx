@@ -9,48 +9,109 @@ const Box = ({ border = '#38BDF8', fill = '#0F172A' }) => (
   <rect x="12" y="12" width="136" height="72" rx="14" fill={fill} stroke={border} strokeWidth="3" />
 );
 
-const DirectionalValve = ({ component, color }) => {
+const DirectionalValve = ({ component, color, nodeState }) => {
   const family = component.simBehavior.family;
-  const rightPorts = family === '2/2' || family === '3/2' ? ['A'] : ['A', 'B'];
-  const segments = component.symbol === 'directional-4-3' ? 3 : 2;
-  const width = segments === 3 ? 132 : 124;
-  const x = segments === 3 ? 14 : 18;
-  const cellWidth = width / segments;
+  const states = component.simBehavior.states ?? [];
+  const currentStateId = nodeState?.currentState ?? states[0]?.id ?? null;
+  const is3pos = component.symbol === 'directional-4-3';
+  const is22 = family === '2/2';
+  const returnPorts = component.simBehavior.returnPorts ?? [];
+
+  if (is22) {
+    const stateDef = states[0] ?? null;
+    const isActive = stateDef && currentStateId === stateDef.id;
+    const routes = stateDef?.routes ?? [];
+    const hasFlow = routes.some((r) => r.length >= 2);
+    const posColor = isActive ? color : `${color}88`;
+    const fillColor = isActive ? '#111827' : '#0c1220';
+
+    return (
+      <>
+        <rect x="32" y="24" width="96" height="48" rx="10" fill={fillColor} stroke={posColor} strokeWidth="3" />
+        {hasFlow && (
+          <>
+            <path d="M52 48 H108" stroke={posColor} strokeWidth="3" strokeLinecap="round" />
+            <polygon points="108,48 98,42 98,54" fill={posColor} />
+          </>
+        )}
+        <text x="40" y="34" fill={color} fontSize="11" fontWeight="800">P</text>
+        <text x="112" y="34" fill={color} fontSize="11" fontWeight="800">A</text>
+        <text x="80" y="90" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="700">
+          {family}
+        </text>
+      </>
+    );
+  }
+
+  const boxWidth = is3pos ? 40 : 48;
+  const totalBoxes = is3pos ? 3 : 2;
+  const gap = 6;
+  const totalWidth = totalBoxes * boxWidth + (totalBoxes - 1) * gap;
+  const startX = (160 - totalWidth) / 2;
+
+  const renderPositionBox = (stateDef, index) => {
+    const isActive = stateDef && currentStateId === stateDef.id;
+    const bx = startX + index * (boxWidth + gap);
+    const posColor = isActive ? color : `${color}88`;
+    const fillColor = isActive ? '#111827' : '#0c1220';
+    const routes = stateDef?.routes ?? [];
+
+    const supplyRoute = routes.find((r) => r.includes('P'));
+    const exhaustRoute = routes.find(
+      (r) =>
+        r.some((p) => (component.simBehavior.workPorts ?? []).includes(p)) &&
+        r.some((p) => returnPorts.includes(p)),
+    );
+
+    return (
+      <g key={stateDef?.id ?? index}>
+        <rect x={bx} y="22" width={boxWidth} height="52" rx="8" fill={fillColor} stroke={posColor} strokeWidth={isActive ? 3 : 2} />
+        {supplyRoute && (
+          <>
+            <path d={`M${bx + 8} 48 H${bx + boxWidth - 8}`} stroke={posColor} strokeWidth="3" strokeLinecap="round" />
+            <polygon points={`${bx + boxWidth - 8},48 ${bx + boxWidth - 16},42 ${bx + boxWidth - 16},54`} fill={posColor} />
+          </>
+        )}
+        {exhaustRoute && (
+          <path d={`M${bx + 8} 48 H${bx + boxWidth - 8}`} stroke={posColor} strokeWidth="2" strokeLinecap="round" strokeDasharray="4 3" />
+        )}
+        {!supplyRoute && !exhaustRoute && routes.length === 0 && stateDef && (
+          <line x1={bx + 10} y1="48" x2={bx + boxWidth - 10} y2="48" stroke={`${posColor}55`} strokeWidth="2" strokeLinecap="round" />
+        )}
+      </g>
+    );
+  };
 
   return (
     <>
-      <rect x={x} y="20" width={width} height="56" rx="12" fill="#111827" stroke={color} strokeWidth="3" />
-      {segments === 2 ? (
-        <line x1="80" y1="20" x2="80" y2="76" stroke={color} strokeWidth="2" />
-      ) : (
+      {states.map((stateDef, index) => renderPositionBox(stateDef, index))}
+
+      {is3pos ? (
         <>
-          <line x1={x + cellWidth} y1="20" x2={x + cellWidth} y2="76" stroke={color} strokeWidth="2" />
-          <line x1={x + cellWidth * 2} y1="20" x2={x + cellWidth * 2} y2="76" stroke={color} strokeWidth="2" />
-        </>
-      )}
-      <path d="M40 48 H68" stroke={color} strokeWidth="3" strokeLinecap="round" />
-      <polygon points="68,48 58,42 58,54" fill={color} />
-      {segments === 3 ? (
-        <>
-          <path d="M88 48 H108" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 4" />
-          <path d="M118 48 H132" stroke={color} strokeWidth="3" strokeLinecap="round" />
-          <polygon points="132,48 122,42 122,54" fill={color} />
+          <text x={startX - 6} y="34" fill={color} fontSize="11" fontWeight="800" textAnchor="end">P</text>
+          <text x={startX + totalWidth + 6} y="34" fill={color} fontSize="11" fontWeight="800">A</text>
+          <text x={startX + totalWidth + 6} y="70" fill={color} fontSize="11" fontWeight="800">B</text>
+          {returnPorts.map((port, i) => (
+            <text key={port} x={startX + (i === 0 ? boxWidth * 0.5 + gap * 0.5 : totalWidth - boxWidth * 0.5 - gap * 0.5)} y="88" fill={color} fontSize="10" fontWeight="800" textAnchor="middle">
+              {port}
+            </text>
+          ))}
         </>
       ) : (
-        <path d="M92 48 H120" stroke={color} strokeWidth="3" strokeLinecap="round" strokeDasharray="5 4" />
+        <>
+          <text x={startX - 6} y="34" fill={color} fontSize="11" fontWeight="800" textAnchor="end">P</text>
+          <text x={startX + totalWidth + 6} y="34" fill={color} fontSize="11" fontWeight="800">A</text>
+          {family !== '3/2' && (
+            <text x={startX + totalWidth + 6} y="70" fill={color} fontSize="11" fontWeight="800">B</text>
+          )}
+          {returnPorts.map((port, i) => (
+            <text key={port} x={startX + (i === 0 ? boxWidth * 0.5 : totalWidth - boxWidth * 0.5)} y="88" fill={color} fontSize="10" fontWeight="800" textAnchor="middle">
+              {port}
+            </text>
+          ))}
+        </>
       )}
-      <text x="30" y="30" fill={color} fontSize="12" fontWeight="800">P</text>
-      {rightPorts.map((port, index) => (
-        <text key={port} x="124" y={index === 0 ? 30 : 68} fill={color} fontSize="12" fontWeight="800">
-          {port}
-        </text>
-      ))}
-      {(component.simBehavior.returnPorts ?? []).map((port, index) => (
-        <text key={port} x={index === 0 ? 46 : 104} y="72" fill={color} fontSize="11" fontWeight="800">
-          {port}
-        </text>
-      ))}
-      <text x="80" y="94" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="700">
+      <text x="80" y="98" textAnchor="middle" fill="#94A3B8" fontSize="10" fontWeight="700">
         {family}
       </text>
     </>
@@ -485,7 +546,7 @@ const NotationSymbol = ({ component, color }) => {
   }
 };
 
-const renderSymbol = (component, color) => {
+const renderSymbol = (component, color, nodeState) => {
   switch (component.symbol) {
     case 'single-cylinder':
       return (
@@ -582,7 +643,7 @@ const renderSymbol = (component, color) => {
     case 'limit-valve':
       return (
         <>
-          <DirectionalValve component={{ ...component, simBehavior: { ...component.simBehavior, family: '3/2' } }} color={color} />
+          <DirectionalValve component={{ ...component, simBehavior: { ...component.simBehavior, family: '3/2' } }} color={color} nodeState={nodeState} />
           <path d="M24 16 L36 8" stroke="#94A3B8" strokeWidth="3" />
           <circle cx="40" cy="8" r="5" fill="#94A3B8" />
         </>
@@ -621,7 +682,7 @@ const renderSymbol = (component, color) => {
         </>
       );
     default:
-      return <DirectionalValve component={component} color={color} />;
+      return <DirectionalValve component={component} color={color} nodeState={nodeState} />;
   }
 };
 
@@ -750,13 +811,13 @@ const renderMotionOverlay = (component, motionState, color) => {
   );
 };
 
-const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null }) => {
+const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null, nodeState = null }) => {
   const color = domainColor(component, active);
   const svgClassName = ['fluid-symbol', className].filter(Boolean).join(' ');
 
   return (
     <svg viewBox="0 0 160 100" className={svgClassName} role="img" aria-label={label ?? component.label}>
-      {renderSymbol(component, color)}
+      {renderSymbol(component, color, nodeState)}
       {renderMotionOverlay(component, motionState, color)}
     </svg>
   );

@@ -340,6 +340,36 @@ export const validateCircuit = (nodes, connections, domain) => {
   };
 };
 
+const buildExhaustPathFromActuator = (adjacency, actuatorNode, actuatorComponent, valveNode, valveComponent, routeInfo, sinkNode, sinkComponent) => {
+  if (!routeInfo.exhaustWorkPort || !routeInfo.activeReturnPort) {
+    return null;
+  }
+
+  const actuatorWorkPorts = actuatorComponent.simBehavior.workPorts ?? [];
+  const fromRefs = actuatorWorkPorts.map((portId) => getRef(actuatorNode.instanceId, portId));
+  const toRefs = [getRef(valveNode.instanceId, routeInfo.exhaustWorkPort)];
+
+  const actuatorToValve = findPath(adjacency, fromRefs, toRefs);
+  if (!actuatorToValve) {
+    return null;
+  }
+
+  const valveReturnRefs = [getRef(valveNode.instanceId, routeInfo.activeReturnPort)];
+  const sinkPortIds = getSinkPortIds(sinkComponent);
+  const sinkRefs = getPortRefs(sinkNode, sinkPortIds);
+
+  const returnToSink = findPath(adjacency, valveReturnRefs, sinkRefs);
+  if (!returnToSink) {
+    return null;
+  }
+
+  return {
+    ports: [...actuatorToValve.ports, ...returnToSink.ports],
+    connectionIds: uniqueArray([...actuatorToValve.connectionIds, ...returnToSink.connectionIds]),
+    nodeIds: uniqueArray([...actuatorToValve.nodeIds, ...returnToSink.nodeIds]),
+  };
+};
+
 export const buildSimulationFlow = (nodes, connections, domain) => {
   const validation = validateCircuit(nodes, connections, domain);
   if (!validation.valid) {
@@ -364,9 +394,63 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
   const sourceComponent = getComponentDefinition(sourceNode.componentId);
   const valveComponent = getComponentDefinition(valveNode.componentId);
   const actuatorComponent = getComponentDefinition(actuatorNode.componentId);
+  const sinkComponent = getComponentDefinition(sinkNode.componentId);
   const routeInfo = getValveRouteInfo(valveNode, valveComponent);
 
   if (!routeInfo?.activeWorkPort) {
+    if (routeInfo?.exhaustWorkPort && actuatorComponent.simBehavior.actuatorType === 'single') {
+      const { adjacency } = buildAdjacency(nodes, connections, domain, 'fluid');
+      const exhaustPath = buildExhaustPathFromActuator(
+        adjacency,
+        actuatorNode,
+        actuatorComponent,
+        valveNode,
+        valveComponent,
+        routeInfo,
+        sinkNode,
+        sinkComponent,
+      );
+
+      if (exhaustPath) {
+        const action = 'ritorno a molla';
+        const activePortKeys = uniqueArray(
+          exhaustPath.ports.map((port) => toPortKey(port.nodeId, port.portId)),
+        );
+
+        return {
+          valid: true,
+          isRunning: true,
+          warnings: [`Schema avviato: ${action} dell'utilizzatore (scarico attraverso il distributore).`],
+          activePorts: activePortKeys,
+          activeConnections: uniqueArray(exhaustPath.connectionIds),
+          activeNodes: uniqueArray([
+            ...exhaustPath.nodeIds,
+            sourceNode.instanceId,
+            valveNode.instanceId,
+            actuatorNode.instanceId,
+            sinkNode.instanceId,
+          ]),
+          actuatorAction: action,
+          summary: {
+            sourceLabel: sourceComponent.label,
+            valveLabel: valveComponent.label,
+            actuatorLabel: actuatorComponent.label,
+          },
+        };
+      }
+
+      return {
+        valid: false,
+        isRunning: false,
+        warnings: ['Il distributore e in riposo: la pompa e bloccata. La valvola limitatrice (PRV) devia la portata al serbatoio. Collega il percorso di scarico A->R al serbatoio per osservare il ritorno dell\'utilizzatore.'],
+        activePorts: [],
+        activeConnections: [],
+        activeNodes: [],
+        actuatorAction: null,
+        summary: null,
+      };
+    }
+
     return {
       valid: false,
       isRunning: false,

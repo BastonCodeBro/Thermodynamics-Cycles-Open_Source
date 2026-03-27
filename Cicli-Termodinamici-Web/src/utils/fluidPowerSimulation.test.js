@@ -78,11 +78,13 @@ describe('fluidPowerSimulation', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  test('requires the valve to be in an active supply position before starting', () => {
+  test('activates exhaust path when valve is in rest position for single-acting cylinder', () => {
     const result = buildSimulationFlow(baseNodes, baseConnections, 'hydraulic');
 
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]).toMatch(/Metti il distributore/i);
+    expect(result.valid).toBe(true);
+    expect(result.isRunning).toBe(true);
+    expect(result.actuatorAction).toBe('ritorno a molla');
+    expect(result.warnings[0]).toMatch(/ritorno a molla/i);
   });
 
   test('toggles the valve state and builds an active simulation snapshot', () => {

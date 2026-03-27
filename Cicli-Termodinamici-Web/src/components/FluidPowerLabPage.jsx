@@ -268,6 +268,50 @@ const pointsToPath = (points) => {
   return path;
 };
 
+const computeMidArrow = (points, arrowSize = 6) => {
+  if (!points || points.length < 2) {
+    return null;
+  }
+
+  const segments = [];
+  let totalLength = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const length = distanceBetween(points[i], points[i + 1]);
+    segments.push({ from: points[i], to: points[i + 1], length });
+    totalLength += length;
+  }
+
+  if (totalLength === 0) {
+    return null;
+  }
+
+  let target = totalLength / 2;
+  let midPoint = points[0];
+  let angle = 0;
+
+  for (const segment of segments) {
+    if (target <= segment.length) {
+      const ratio = segment.length > 0 ? target / segment.length : 0;
+      midPoint = {
+        x: segment.from.x + (segment.to.x - segment.from.x) * ratio,
+        y: segment.from.y + (segment.to.y - segment.from.y) * ratio,
+      };
+      angle = Math.atan2(segment.to.y - segment.from.y, segment.to.x - segment.from.x);
+      break;
+    }
+    target -= segment.length;
+  }
+
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const tip = { x: midPoint.x + cos * arrowSize, y: midPoint.y + sin * arrowSize };
+  const left = { x: midPoint.x - cos * arrowSize + sin * arrowSize * 0.55, y: midPoint.y - sin * arrowSize - cos * arrowSize * 0.55 };
+  const right = { x: midPoint.x - cos * arrowSize - sin * arrowSize * 0.55, y: midPoint.y - sin * arrowSize + cos * arrowSize * 0.55 };
+
+  return `${tip.x},${tip.y} ${left.x},${left.y} ${right.x},${right.y}`;
+};
+
 const describeActuatorState = (node, component) => {
   const routeInfo = getValveRouteInfo(node, component);
   return routeInfo?.state?.label ?? 'Stato';
@@ -1335,40 +1379,36 @@ const FluidPowerLabPage = () => {
             >
               <div className="fluid-canvas-stage">
                 <svg className="fluid-connections-layer" viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
-                  <defs>
-                    <marker
-                      id={`fluid-active-arrow-${domain}`}
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="8"
-                      refY="5"
-                      orient="auto"
-                    >
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill={domainMeta.activeColor} />
-                    </marker>
-                  </defs>
                   {workspace.connections.map((connection) => {
                     const isActive = workspace.snapshot.activeConnections.includes(connection.id);
                     const isMechanical = connection.kind === 'mechanical';
                     const isSelected =
                       workspace.selectedEntity?.type === 'connection' &&
                       workspace.selectedEntity.id === connection.id;
+                    const midArrow = isActive && !isMechanical
+                      ? computeMidArrow(connection.pathPoints, 6)
+                      : null;
 
                     return (
-                      <path
-                        key={connection.id}
-                        d={pointsToPath(connection.pathPoints)}
-                        className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
-                        markerEnd={
-                          isActive && !isMechanical ? `url(#fluid-active-arrow-${domain})` : undefined
-                        }
-                        onClick={() =>
-                          updateWorkspace((current) => ({
-                            ...current,
-                            selectedEntity: { type: 'connection', id: connection.id },
-                          }))
-                        }
-                      />
+                      <g key={connection.id}>
+                        <path
+                          d={pointsToPath(connection.pathPoints)}
+                          className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
+                          onClick={() =>
+                            updateWorkspace((current) => ({
+                              ...current,
+                              selectedEntity: { type: 'connection', id: connection.id },
+                            }))
+                          }
+                        />
+                        {midArrow && (
+                          <polygon
+                            points={midArrow}
+                            fill={domainMeta.activeColor}
+                            opacity="0.9"
+                          />
+                        )}
+                      </g>
                     );
                   })}
                 </svg>
@@ -1424,6 +1464,7 @@ const FluidPowerLabPage = () => {
                         active={isActive}
                         label={node.label}
                         motionState={motionState}
+                        nodeState={node.state ?? null}
                       />
                       {(motionBadge || teachingNote) && (
                         <div className="fluid-node-footer">
