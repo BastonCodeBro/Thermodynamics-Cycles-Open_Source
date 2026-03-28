@@ -91,6 +91,37 @@ describe('FluidPowerLabPage', () => {
     expect(within(hoverCard).getByText(/Portata nominale/i)).toBeInTheDocument();
   });
 
+  test('shows pressure flow and temperature on line hover', async () => {
+    const { container } = render(<FluidPowerLabPage />);
+
+    addComponent(/^Aggiungi Pompa idraulica$/i);
+    addComponent(/^Aggiungi Valvola 3\/2 monostabile$/i);
+    addComponent(/^Aggiungi Cilindro a singolo effetto$/i);
+    addComponent(/^Aggiungi Serbatoio$/i);
+
+    fireEvent.click(screen.getByLabelText(/Porta P di Pompa idraulica 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta P di Valvola 3\/2 monostabile 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta A di Valvola 3\/2 monostabile 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta A di Cilindro a singolo effetto 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta R di Valvola 3\/2 monostabile 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta T di Serbatoio 1/i));
+    fireEvent.click(screen.getByRole('button', { name: /Commuta Valvola 3\/2 monostabile 1/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Avvia schema/i }));
+
+    const activeLine = await waitFor(() => {
+      const line = container.querySelector('.fluid-connection-active');
+      expect(line).not.toBeNull();
+      return line;
+    });
+
+    fireEvent.mouseEnter(activeLine);
+
+    const hoverCard = screen.getByRole('note', { name: /Linea /i });
+    expect(within(hoverCard).getByText(/Portata/i)).toBeInTheDocument();
+    expect(within(hoverCard).getByText(/Pressione ingresso/i)).toBeInTheDocument();
+    expect(within(hoverCard).getByText(/Temperatura/i)).toBeInTheDocument();
+  }, 10000);
+
   test('persists autosave without project mode metadata', async () => {
     render(<FluidPowerLabPage />);
 

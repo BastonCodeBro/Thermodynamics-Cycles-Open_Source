@@ -218,6 +218,8 @@ export const componentCatalog = [
     simBehavior: {
       kind: 'sink',
       sinkPorts: ['IN', 'OUT'],
+      returnPorts: ['IN'],
+      supplyPorts: ['OUT'],
     },
   },
   {
@@ -447,6 +449,8 @@ export const componentCatalog = [
     simBehavior: {
       kind: 'sink',
       sinkPorts: ['R'],
+      returnPorts: ['R'],
+      supplyPorts: [],
     },
   },
   {

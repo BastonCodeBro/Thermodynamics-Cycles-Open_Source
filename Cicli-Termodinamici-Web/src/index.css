@@ -2339,6 +2339,25 @@ p { margin: 0; }
   text-align: right;
 }
 
+.fluid-connection-hovercard {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 1rem));
+  min-width: 240px;
+  max-width: 300px;
+  padding: 0.8rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 28, 0.98)),
+    rgba(8, 15, 28, 0.96);
+  box-shadow:
+    0 20px 40px rgba(2, 6, 23, 0.56),
+    0 0 0 1px rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(16px);
+  z-index: 16;
+  pointer-events: none;
+}
+
 .fluid-node-selection-chip {
   display: inline-flex;
   align-items: center;

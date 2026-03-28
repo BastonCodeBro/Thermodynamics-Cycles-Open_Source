@@ -201,8 +201,15 @@ const getRef = (nodeId, portId) => ({ nodeId, portId });
 
 const getPortRefs = (node, portIds) => portIds.map((portId) => getRef(node.instanceId, portId));
 
-const getSinkPortIds = (component) =>
-  component.simBehavior.sinkPorts ?? getFluidPorts(component).map((port) => port.id);
+const getReturnSinkPortIds = (component) =>
+  component.simBehavior.returnPorts ??
+  component.simBehavior.sinkPorts ??
+  getFluidPorts(component).map((port) => port.id);
+
+const getSupplySinkPortIds = (component) =>
+  component.simBehavior.supplyPorts ??
+  component.simBehavior.sinkPorts ??
+  getFluidPorts(component).map((port) => port.id);
 
 const buildConnectivityDetails = (adjacency, valveNode, valveComponent, actuatorNode, actuatorComponent) => {
   const details = [];
@@ -316,7 +323,7 @@ export const validateCircuit = (nodes, connections, domain) => {
           const returnPath = findPath(
             adjacency,
             getPortRefs(valveNode, valveComponent.simBehavior.returnPorts ?? []),
-            getPortRefs(sinkNode, getSinkPortIds(sinkComponent)),
+            getPortRefs(sinkNode, getReturnSinkPortIds(sinkComponent)),
           );
 
           if (!returnPath) {
@@ -359,7 +366,7 @@ const buildSuctionPath = (adjacency, sourceNode, sourceComponent, sinkNode, sink
 
   return findPath(
     adjacency,
-    getPortRefs(sinkNode, getSinkPortIds(sinkComponent)),
+    getPortRefs(sinkNode, getSupplySinkPortIds(sinkComponent)),
     [getRef(sourceNode.instanceId, suctionPort)],
   );
 };
@@ -376,6 +383,12 @@ const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure', domain 
         ? defaults.suctionPressureBar
         : defaults.returnPressureBar;
   let flowRate = defaults.nominalFlowRateLpm;
+  let temperatureC =
+    phase === 'pressure'
+      ? defaults.pressureTemperatureC
+      : phase === 'suction'
+        ? defaults.suctionTemperatureC
+        : defaults.returnTemperatureC;
   let velocityFactor = phase === 'pressure' ? 1 : phase === 'mechanical' ? 1.8 : 0.78;
 
   for (const restriction of restrictions) {
@@ -387,6 +400,7 @@ const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure', domain 
       flowRate *= restriction.flowMultiplier;
       pressure *= 0.55 + 0.45 * restriction.flowMultiplier;
       velocityFactor *= restriction.flowMultiplier;
+      temperatureC += (1 - restriction.flowMultiplier) * (domain === 'hydraulic' ? 7 : 3);
     }
 
     if (restriction.type === 'reliefValve' || restriction.type === 'lowPrv') {
@@ -402,6 +416,7 @@ const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure', domain 
   return {
     pressure: Math.round(pressure * 10) / 10,
     flowRate: Math.round(flowRate * 10) / 10,
+    temperatureC: Math.round(temperatureC * 10) / 10,
     velocityFactor: Math.round(clamp(velocityFactor, 0.12, 2.4) * 100) / 100,
   };
 };
@@ -438,6 +453,7 @@ const buildConnectionStateEntries = (
             : Math.round(
                 Math.max(signal.pressure - (phase === 'pressure' ? 8 : 3), 0) * 10,
               ) / 10,
+        temperatureC: phase === 'mechanical' ? null : signal.temperatureC,
         fluidPowerKw,
         velocityFactor: signal.velocityFactor,
       },
@@ -471,6 +487,7 @@ const materializeConnectionStates = (connections, activeStates) =>
         flowRate: null,
         pressureIn: null,
         pressureOut: null,
+        temperatureC: null,
         fluidPowerKw: null,
         velocityFactor: 1,
         ...(activeStates[connection.id] ?? {}),
@@ -540,7 +557,7 @@ const buildExhaustPathFromActuator = (adjacency, actuatorNode, actuatorComponent
   }
 
   const valveReturnRefs = [getRef(valveNode.instanceId, routeInfo.activeReturnPort)];
-  const sinkPortIds = getSinkPortIds(sinkComponent);
+  const sinkPortIds = getReturnSinkPortIds(sinkComponent);
   const sinkRefs = getPortRefs(sinkNode, sinkPortIds);
 
   const returnToSink = findPath(adjacency, valveReturnRefs, sinkRefs);
@@ -815,12 +832,18 @@ const DOMAIN_SIGNAL_DEFAULTS = {
     nominalFlowRateLpm: 22,
     returnPressureBar: 4.5,
     suctionPressureBar: 0.9,
+    pressureTemperatureC: 48,
+    returnTemperatureC: 42,
+    suctionTemperatureC: 36,
   },
   pneumatic: {
     nominalPressureBar: 6.5,
     nominalFlowRateLpm: 280,
     returnPressureBar: 1.15,
     suctionPressureBar: 1.0,
+    pressureTemperatureC: 24,
+    returnTemperatureC: 20,
+    suctionTemperatureC: 21,
   },
 };
 

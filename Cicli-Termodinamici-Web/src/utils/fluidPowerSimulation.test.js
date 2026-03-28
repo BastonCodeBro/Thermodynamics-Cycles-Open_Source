@@ -165,6 +165,26 @@ describe('fluidPowerSimulation', () => {
     expect(result.activeNodes).toContain('driver-1');
   });
 
+  test('does not accept a hydraulic return line wired into the reservoir suction port', () => {
+    const wrongConnections = [
+      baseConnections[0],
+      baseConnections[1],
+      {
+        id: 'c3-wrong',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-1', portId: 'R' },
+        to: { nodeId: 'tank-1', portId: 'OUT' },
+        pathPoints: [],
+      },
+    ];
+
+    const result = buildSimulationFlow(applyValveState(baseNodes, 'valve-1'), wrongConnections, 'hydraulic');
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]).toMatch(/ritorno|schema non e coerente/i);
+  });
+
   test('reverses a double-acting hydraulic actuator without stopping the hydraulic routing logic', () => {
     const nodes = [
       {

@@ -351,6 +351,9 @@ const formatPressureValue = (value) =>
 const formatFlowRateValue = (value) =>
   typeof value === 'number' ? `${value.toFixed(1)} L/min` : 'n/d';
 
+const formatTemperatureValue = (value) =>
+  typeof value === 'number' ? `${value.toFixed(1)} degC` : 'n/d';
+
 const formatPowerValue = (value) =>
   typeof value === 'number' ? `${value.toFixed(2)} kW` : 'n/d';
 
@@ -510,9 +513,64 @@ const getConnectedStatesForNode = (workspace, nodeId, connectionVisualStates) =>
   };
 };
 
+const getConnectionTooltipAnchor = (points) => {
+  if (!points || points.length === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  const middleIndex = Math.floor(points.length / 2);
+  const current = points[middleIndex];
+  const previous = points[Math.max(middleIndex - 1, 0)];
+
+  return {
+    x: (current.x + previous.x) / 2,
+    y: (current.y + previous.y) / 2,
+  };
+};
+
 const describeActuatorState = (node, component) => {
   const routeInfo = getValveRouteInfo(node, component);
   return routeInfo?.state?.label ?? 'Stato';
+};
+
+const getFluidPortRole = (component, port) => {
+  if (!component || port?.kind !== 'fluid') {
+    return null;
+  }
+
+  if (component.simBehavior.kind === 'source') {
+    if (component.simBehavior.sourcePort === port.id) {
+      return 'source-pressure';
+    }
+    if (component.simBehavior.suctionPort === port.id) {
+      return 'source-suction';
+    }
+  }
+
+  if (component.simBehavior.kind === 'sink') {
+    if ((component.simBehavior.returnPorts ?? []).includes(port.id)) {
+      return 'sink-return';
+    }
+    if ((component.simBehavior.supplyPorts ?? []).includes(port.id)) {
+      return 'sink-supply';
+    }
+
+    return 'sink-generic';
+  }
+
+  if (component.simBehavior.kind === 'valve') {
+    if (component.simBehavior.supplyPort === port.id) {
+      return 'valve-supply';
+    }
+    if ((component.simBehavior.returnPorts ?? []).includes(port.id)) {
+      return 'valve-return';
+    }
+    if ((component.simBehavior.workPorts ?? []).includes(port.id)) {
+      return 'valve-work';
+    }
+  }
+
+  return 'fluid-generic';
 };
 
 const isPortCompatible = (firstPort, secondPort, domain) => {
@@ -525,6 +583,16 @@ const isPortCompatible = (firstPort, secondPort, domain) => {
   }
 
   if (firstPort.kind === 'fluid' && (firstPort.domain !== domain || secondPort.domain !== domain)) {
+    return false;
+  }
+
+  const roles = [firstPort.portRole, secondPort.portRole];
+  const hasSourceSuction = roles.includes('source-suction');
+  const hasSinkSupply = roles.includes('sink-supply');
+  const hasSinkReturn = roles.includes('sink-return');
+  const hasValveReturn = roles.includes('valve-return');
+
+  if ((hasSourceSuction && hasSinkReturn) || (hasValveReturn && hasSinkSupply)) {
     return false;
   }
 
@@ -827,6 +895,7 @@ const buildConnectionOperatingRows = (connection, state) => {
     ['Portata', formatFlowRateValue(state?.flowRate)],
     ['Pressione ingresso', formatPressureValue(state?.pressureIn)],
     ['Pressione uscita', formatPressureValue(state?.pressureOut)],
+    ['Temperatura', formatTemperatureValue(state?.temperatureC)],
     ['Potenza fluida', formatPowerValue(fluidPowerKw)],
   ];
 };
@@ -1088,6 +1157,10 @@ const buildNodeTechnicalDetails = (
     operatingRows.push(['Portata letta', formatFlowRateValue(reading.flowRate)]);
   }
 
+  if (dominantState?.temperatureC != null) {
+    operatingRows.push(['Temperatura fluido', formatTemperatureValue(dominantState.temperatureC)]);
+  }
+
   if (
     dominantState?.flowRate != null ||
     dominantState?.pressureIn != null ||
@@ -1172,6 +1245,7 @@ const FluidPowerLabPage = () => {
   const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  const [hoveredConnectionId, setHoveredConnectionId] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
 
@@ -1296,6 +1370,10 @@ const FluidPowerLabPage = () => {
     [workspace, connectionVisualStates, measurementMap, domain],
   );
   const bomItems = useMemo(() => buildBillOfMaterials(workspace), [workspace]);
+  const hoveredConnection = useMemo(
+    () => workspace.connections.find((connection) => connection.id === hoveredConnectionId) ?? null,
+    [workspace.connections, hoveredConnectionId],
+  );
 
   const updateWorkspace = useCallback((updater) => {
     dispatch({
@@ -1457,6 +1535,7 @@ const FluidPowerLabPage = () => {
       portId: port.id,
       kind: port.kind,
       domain: component.domain,
+      portRole: getFluidPortRole(component, port),
       label: port.label,
       nodeLabel: toEntityLabel(node, component),
     };
@@ -1893,6 +1972,10 @@ const FluidPowerLabPage = () => {
                           d={pointsToPath(connection.pathPoints)}
                           className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isLowPressure ? 'fluid-connection-lowpressure' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isMechanical && isActive ? 'fluid-connection-mechanical-active' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
                           style={{ '--fluid-flow-speed': `${animationDuration}s` }}
+                          onMouseEnter={() => setHoveredConnectionId(connection.id)}
+                          onMouseLeave={() =>
+                            setHoveredConnectionId((current) => (current === connection.id ? null : current))
+                          }
                           onClick={() =>
                             updateWorkspace((current) => ({
                               ...current,
@@ -1913,6 +1996,37 @@ const FluidPowerLabPage = () => {
                     );
                   })}
                 </svg>
+
+                {hoveredConnection && (
+                  <div
+                    className="fluid-connection-hovercard"
+                    role="note"
+                    aria-label={`Linea ${hoveredConnection.id}`}
+                    style={{
+                      left: getConnectionTooltipAnchor(hoveredConnection.pathPoints).x,
+                      top: getConnectionTooltipAnchor(hoveredConnection.pathPoints).y,
+                    }}
+                  >
+                    <div className="fluid-node-hovercard-head">
+                      <strong>Linea fluido</strong>
+                      <span>{hoveredConnection.kind === 'mechanical' ? 'Trasmissione meccanica' : 'Ramo di processo'}</span>
+                    </div>
+                    <div className="fluid-node-hovercard-section">
+                      <span className="fluid-node-hovercard-label">Parametri linea</span>
+                      <div className="fluid-node-hovercard-rows">
+                        {buildConnectionOperatingRows(
+                          hoveredConnection,
+                          connectionVisualStates[hoveredConnection.id] ?? null,
+                        ).map(([label, value]) => (
+                          <div key={`hover-connection-${label}`} className="fluid-node-hovercard-row">
+                            <span>{label}</span>
+                            <strong>{value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {workspace.nodes.map((node) => {
                   const component = getComponentDefinition(node.componentId);
