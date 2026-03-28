@@ -52,6 +52,91 @@ npm install
 npm run dev
 ```
 
+## Solver fluid power professionale
+
+Il laboratorio `impianti-fluidici` usa sempre un solver locale ThermoHub per garantire risposta immediata nel browser.
+Da ora puo anche delegare il calcolo a un backend esterno piu avanzato, mantenendo fallback automatico locale se il servizio non risponde.
+
+Per abilitare il bridge esterno imposta:
+
+```powershell
+$env:VITE_FLUID_POWER_SOLVER_URL="http://localhost:8080/api/fluid-power/solve"
+$env:FLUID_POWER_SOLVER_PORT="8080"
+npm run dev
+```
+
+Avvio del backend solver locale:
+
+```powershell
+npm run solver:dev
+```
+
+Oppure in un file `.env.local`:
+
+```dotenv
+VITE_FLUID_POWER_SOLVER_URL=http://localhost:8080/api/fluid-power/solve
+```
+
+Se `omc` non e nel `PATH`, puoi indicarlo esplicitamente:
+
+```powershell
+$env:OMC_EXECUTABLE="C:\\OpenModelica1.25.5-64bit\\bin\\omc.exe"
+npm run solver:dev
+```
+
+Se `omc.exe` non e installato in Windows ma Docker Desktop e attivo, il solver usa in automatico l'immagine ufficiale:
+
+```text
+openmodelica/openmodelica:v1.26.3-minimal
+```
+
+Alla prima esecuzione il backend inizializza nel profilo Docker le librerie `Modelica` e `OpenHydraulics`.
+
+### Contratto del backend
+
+Il frontend invia una `POST` JSON con:
+
+- `domain`
+- `components`
+- `connections`
+- `modelica.modelName`
+- `modelica.source`
+
+Il backend puo usare queste informazioni per tradurre il circuito verso un solver esterno come OpenModelica + OpenHydraulics.
+
+Endpoint esposti dal server locale:
+
+- `GET /health`
+- `GET /api/fluid-power/capabilities`
+- `POST /api/fluid-power/solve`
+
+Risposta attesa:
+
+```json
+{
+  "snapshot": {
+    "valid": true,
+    "isRunning": true,
+    "connectionStates": {},
+    "measurements": {},
+    "readings": {},
+    "warnings": []
+  },
+  "solver": {
+    "source": "external",
+    "detail": "OpenModelica + OpenHydraulics"
+  }
+}
+```
+
+Se il backend non e configurato, va in timeout o restituisce un errore, il canvas continua a funzionare con il solver locale e mostra `Fallback locale`.
+
+### Riferimento open source consigliato
+
+Riferimento ufficiale verificato:
+
+- [OpenHydraulics](https://build.openmodelica.org/Documentation/OpenHydraulics.html): libreria Modelica libera per componenti e circuiti idraulici 1D, adatta come base per una co-simulazione piu professionale.
+
 ## Script
 
 - `npm run dev`

@@ -4,6 +4,7 @@ import InputField from './shared/InputField';
 import IdealGasCyclePage from './shared/IdealGasCyclePage';
 import { calcDieselCycle } from '../utils/idealGas';
 import { pointAnnotations } from './shared/plotConfig';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#EF4444';
 
@@ -55,11 +56,11 @@ const presets = [
 
 const insights = {
   takeaways: [
-    'Il rapporto di cut-off sposta durata e intensità del calore immesso a pressione costante.',
-    'A parità di r, aumentare rc abbassa il rendimento ideale ma può contenere il picco di pressione.',
-    'Nel grafico P-v il tratto 2-3 orizzontale distingue subito il Diesel dall\'Otto.',
+    'Il rapporto di cut-off sposta durata e intensita del calore immesso a pressione costante.',
+    'A parita di r, aumentare rc abbassa il rendimento ideale ma puo contenere il picco di pressione.',
+    'Nel grafico P-v il tratto 2-3 orizzontale distingue subito il Diesel dall Otto.',
   ],
-  commonMistake: 'Usare rc come se fosse un rapporto di compressione: rc è il rapporto tra i volumi durante la combustione isobara.',
+  commonMistake: 'Usare rc come se fosse un rapporto di compressione: rc e il rapporto tra i volumi durante la combustione isobara.',
 };
 
 const legendItems = [
@@ -68,6 +69,62 @@ const legendItems = [
   { label: 'Lavoro utile', color: COLOR },
   { label: 'Compressione/pompaggio', color: '#475569' },
 ];
+
+const buildDieselDisplayResult = (cycle, values) => {
+  const netWork = cycle.stats.q_in - cycle.stats.q_out;
+
+  return {
+    allPoints: cycle.points,
+    idealPoints: cycle.idealPoints,
+    schematicType: 'diesel',
+    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
+    summaryItems: [
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
+      { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+    statCards: [
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
+      { label: 'T massima', value: `${cycle.points[2].t.toFixed(0)} degC` },
+      { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
+    ],
+    formulas: [
+      { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
+      { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_3}{v_2}', value: values.rc },
+      { label: '1 -> 2', description: 'Compressione reale' },
+      { label: '2 -> 3', description: 'Apporto di calore a pressione costante' },
+      { label: '3 -> 4', description: 'Espansione reale' },
+      { label: '4 -> 1', description: 'Cessione di calore a volume costante' },
+      { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
+      { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
+      { label: 'Rendimento ideale', latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}', value: cycle.stats.eta_ideal, display: true },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta },
+    ],
+    pdfTitle: 'Diesel',
+    formulaPointLabels: ['1: Inizio', '2: Compr.', '3: Comb.', '4: Esp.'],
+    pdfPointLabels: ['1: Inizio', '2: Compr.', '3: Comb.', '4: Esp.'],
+    pdfFormulas: [
+      {
+        label: 'Rendimento ideale Diesel',
+        latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}',
+        value: cycle.stats.eta_ideal,
+      },
+      {
+        label: 'Lavoro netto',
+        latex: 'w_{net} = q_{in} - q_{out}',
+        value: netWork,
+      },
+      {
+        label: 'Rendimento reale',
+        latex: '\\eta = \\frac{w_{net}}{q_{in}}',
+        value: cycle.stats.eta,
+      },
+    ],
+    stats: cycle.stats,
+  };
+};
 
 const DieselPage = () => {
   const [inputs, setInputs] = useState({
@@ -118,68 +175,27 @@ const DieselPage = () => {
           { processType: 'isochoric', model: 'ideal-gas' },
         ],
       })}
-      buildResult={async (values) => {
-        const cycle = calcDieselCycle({
+      resolveResult={async (values) => resolveCycleDisplayResult({
+        cycleId: 'diesel',
+        family: 'ideal-gas',
+        inputs: {
           p1Bar: values.p_low,
           t1C: values.t_min,
           r: values.r,
           rc: values.rc,
           eta: values.eta_s,
           massFlow: values.mass_flow,
-        });
-        const netWork = cycle.stats.q_in - cycle.stats.q_out;
-        return {
-          allPoints: cycle.points,
-          idealPoints: cycle.idealPoints,
-          schematicType: 'diesel',
-          pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
-          summaryItems: [
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
-            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
-            { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
-          ],
-          statCards: [
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
-            { label: 'T massima', value: `${cycle.points[2].t.toFixed(0)} degC` },
-            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
-          ],
-          formulas: [
-            { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
-            { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_3}{v_2}', value: values.rc },
-            { label: '1 → 2', description: 'Compressione reale' },
-            { label: '2 → 3', description: 'Apporto di calore a pressione costante' },
-            { label: '3 → 4', description: 'Espansione reale' },
-            { label: '4 → 1', description: 'Cessione di calore a volume costante' },
-            { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
-            { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
-            { label: 'Rendimento ideale', latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}', value: cycle.stats.eta_ideal, display: true },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta },
-          ],
-          pdfTitle: 'Diesel',
-          formulaPointLabels: ['1: Inizio', '2: Compr.', '3: Comb.', '4: Esp.'],
-          pdfPointLabels: ['1: Inizio', '2: Compr.', '3: Comb.', '4: Esp.'],
-          pdfFormulas: [
-            {
-              label: 'Rendimento ideale Diesel',
-              latex: '\\eta_{diesel} = 1 - \\frac{1}{r^{k-1}} \\cdot \\frac{r_c^k - 1}{k(r_c-1)}',
-              value: cycle.stats.eta_ideal,
-            },
-            {
-              label: 'Lavoro netto',
-              latex: 'w_{net} = q_{in} - q_{out}',
-              value: netWork,
-            },
-            {
-              label: 'Rendimento reale',
-              latex: '\\eta = \\frac{w_{net}}{q_{in}}',
-              value: cycle.stats.eta,
-            },
-          ],
-          stats: cycle.stats,
-        };
-      }}
+        },
+        computeLocalResult: async () => calcDieselCycle({
+          p1Bar: values.p_low,
+          t1C: values.t_min,
+          r: values.r,
+          rc: values.rc,
+          eta: values.eta_s,
+          massFlow: values.mass_flow,
+        }),
+        mapResultToDisplay: (cycle) => buildDieselDisplayResult(cycle, values),
+      })}
       buildError={() => 'Controlla i dati: servono r > 1, rc > 1 e un rendimento isentropico compreso tra 0 e 1.'}
       renderInputs={({ inputs: values, setInputs: updateInputs, accentColor }) => (
         <>
@@ -207,4 +223,3 @@ const DieselPage = () => {
 };
 
 export default DieselPage;
-

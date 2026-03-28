@@ -15,6 +15,11 @@ export const createEmptyFluidPowerSnapshot = () => ({
   readings: {},
   actuatorTiming: null,
   summary: null,
+  solverMeta: {
+    source: 'local',
+    usedFallback: false,
+    detail: 'Solver locale ThermoHub',
+  },
   events: [],
 });
 

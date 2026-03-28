@@ -26,6 +26,7 @@ const IdealGasCyclePage = ({
   canCalculate,
   renderInputs,
   buildResult,
+  resolveResult,
   buildError,
   plotDefinitions,
   getPathOptions,
@@ -149,7 +150,7 @@ const IdealGasCyclePage = ({
     setLoading(true);
     setError(null);
     try {
-      setResults(await buildResult(inputs, activeMode));
+      setResults(await (resolveResult ?? buildResult)(inputs, activeMode));
     } catch (calculationError) {
       setError(buildError?.(calculationError, inputs, activeMode) ?? 'Parametri non validi per il ciclo selezionato.');
       console.error(calculationError);
@@ -271,6 +272,7 @@ const IdealGasCyclePage = ({
       EmptyIcon={EmptyIcon}
       emptyText={emptyText}
       modeOptions={modeOptions}
+      solverMeta={results?.solverMeta}
       presets={presets}
       onApplyPreset={handleApplyPreset}
       insights={insights}

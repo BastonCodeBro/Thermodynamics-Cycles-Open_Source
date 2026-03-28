@@ -8,7 +8,9 @@
     "build": "node -e \"require('node:fs').rmSync('dist',{ recursive:true, force:true })\" && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "solver:dev": "node solver/openmodelica-solver-server.mjs",
+    "thermo-solver:dev": "node solver/thermo-cycle-solver-server.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

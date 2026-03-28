@@ -4,6 +4,7 @@ import InputField from './shared/InputField';
 import IdealGasCyclePage from './shared/IdealGasCyclePage';
 import { calcOttoCycle } from '../utils/idealGas';
 import { pointAnnotations } from './shared/plotConfig';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#FCD34D';
 
@@ -55,9 +56,9 @@ const presets = [
 
 const insights = {
   takeaways: [
-    'A parità di T massima il rapporto di compressione è la leva principale sul rendimento ideale.',
-    'Il divario tra 2-2s e 4-4s mostra subito l\'effetto delle irreversibilità.',
-    'Nel ciclo Otto l\'apporto di calore avviene a volume costante: confrontalo con Diesel e Duale.',
+    'A parita di T massima il rapporto di compressione e la leva principale sul rendimento ideale.',
+    'Il divario tra 2-2s e 4-4s mostra subito l effetto delle irreversibilita.',
+    'Nel ciclo Otto l apporto di calore avviene a volume costante: confrontalo con Diesel e Duale.',
   ],
   commonMistake: 'Confondere il rapporto di compressione con il rapporto di pressione: qui conta il rapporto tra i volumi del cilindro.',
 };
@@ -68,6 +69,61 @@ const legendItems = [
   { label: 'Lavoro utile', color: COLOR },
   { label: 'Compressione', color: '#475569' },
 ];
+
+const buildOttoDisplayResult = (cycle, values) => {
+  const netWork = cycle.stats.q_in - cycle.stats.q_out;
+
+  return {
+    allPoints: cycle.points,
+    idealPoints: cycle.idealPoints,
+    schematicType: 'otto',
+    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
+    summaryItems: [
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
+      { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+    statCards: [
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
+      { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
+      { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg` },
+    ],
+    formulas: [
+      { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
+      { label: '1 -> 2', description: 'Compressione reale con', latex: 'v_2 = \\frac{v_1}{r}' },
+      { label: '2 -> 3', description: 'Apporto di calore a volume costante' },
+      { label: '3 -> 4', description: 'Espansione reale fino a', latex: 'v_4 = v_1' },
+      { label: '4 -> 1', description: 'Cessione di calore a volume costante' },
+      { label: 'Calore in ingresso', latex: 'q_{in} = c_v (T_3 - T_2)', value: cycle.stats.q_in },
+      { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
+      { label: 'Rendimento ideale', latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}', value: cycle.stats.eta_ideal, display: true },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta },
+    ],
+    pdfTitle: 'Otto',
+    formulaPointLabels: ['1: Aspir.', '2: Compr.', '3: Comb.', '4: Esp.'],
+    pdfPointLabels: ['1: Aspir.', '2: Compr.', '3: Comb.', '4: Esp.'],
+    pdfFormulas: [
+      {
+        label: 'Rendimento ideale',
+        latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}',
+        value: cycle.stats.eta_ideal,
+      },
+      {
+        label: 'Lavoro netto',
+        latex: 'w_{net} = q_{in} - q_{out}',
+        value: netWork,
+      },
+      {
+        label: 'Rendimento reale',
+        latex: '\\eta = \\frac{w_{net}}{q_{in}}',
+        value: cycle.stats.eta,
+      },
+    ],
+    stats: cycle.stats,
+  };
+};
 
 const OttoPage = () => {
   const [inputs, setInputs] = useState({
@@ -118,73 +174,33 @@ const OttoPage = () => {
           { processType: 'isochoric', model: 'ideal-gas' },
         ],
       })}
-      buildResult={async (values) => {
-        const cycle = calcOttoCycle({
+      resolveResult={async (values) => resolveCycleDisplayResult({
+        cycleId: 'otto',
+        family: 'ideal-gas',
+        inputs: {
           p1Bar: values.p_low,
           t1C: values.t_min,
           r: values.r,
           t3C: values.t_max,
           eta: values.eta_s,
           massFlow: values.mass_flow,
-        });
-        const netWork = cycle.stats.q_in - cycle.stats.q_out;
-        return {
-          allPoints: cycle.points,
-          idealPoints: cycle.idealPoints,
-          schematicType: 'otto',
-          pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine combustione', '4 Fine espansione'],
-          summaryItems: [
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
-            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
-            { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
-          ],
-          statCards: [
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
-            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
-            { label: 'Calore ceduto', value: `${cycle.stats.q_out.toFixed(1)} kJ/kg` },
-          ],
-          formulas: [
-            { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
-            { label: '1 → 2', description: 'Compressione reale con', latex: 'v_2 = \\frac{v_1}{r}' },
-            { label: '2 → 3', description: 'Apporto di calore a volume costante' },
-            { label: '3 → 4', description: 'Espansione reale fino a', latex: 'v_4 = v_1' },
-            { label: '4 → 1', description: 'Cessione di calore a volume costante' },
-            { label: 'Calore in ingresso', latex: 'q_{in} = c_v (T_3 - T_2)', value: cycle.stats.q_in },
-            { label: 'Calore in uscita', latex: 'q_{out} = c_v (T_4 - T_1)', value: cycle.stats.q_out },
-            { label: 'Rendimento ideale', latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}', value: cycle.stats.eta_ideal, display: true },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta },
-          ],
-          pdfTitle: 'Otto',
-          formulaPointLabels: ['1: Aspir.', '2: Compr.', '3: Comb.', '4: Esp.'],
-          pdfPointLabels: ['1: Aspir.', '2: Compr.', '3: Comb.', '4: Esp.'],
-          pdfFormulas: [
-            {
-              label: 'Rendimento ideale',
-              latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}',
-              value: cycle.stats.eta_ideal,
-            },
-            {
-              label: 'Lavoro netto',
-              latex: 'w_{net} = q_{in} - q_{out}',
-              value: netWork,
-            },
-            {
-              label: 'Rendimento reale',
-              latex: '\\eta = \\frac{w_{net}}{q_{in}}',
-              value: cycle.stats.eta,
-            },
-          ],
-          stats: cycle.stats,
-        };
-      }}
+        },
+        computeLocalResult: async () => calcOttoCycle({
+          p1Bar: values.p_low,
+          t1C: values.t_min,
+          r: values.r,
+          t3C: values.t_max,
+          eta: values.eta_s,
+          massFlow: values.mass_flow,
+        }),
+        mapResultToDisplay: (cycle) => buildOttoDisplayResult(cycle, values),
+      })}
       buildError={() => 'Controlla i dati: servono r > 1, T massima maggiore di T iniziale e rendimento isentropico compreso tra 0 e 1.'}
       renderInputs={({ inputs: values, setInputs: updateInputs, accentColor }) => (
         <>
           <h3 className="card-title">Parametri motore</h3>
           <p className="input-hint">
-            Parti da r e dalla temperatura massima: nel ciclo Otto la combustione è isocora, quindi il confronto con Diesel e Duale si legge bene già dai punti 2, 3 e 4.
+            Parti da r e dalla temperatura massima: nel ciclo Otto la combustione e isocora, quindi il confronto con Diesel e Duale si legge bene gia dai punti 2, 3 e 4.
           </p>
           <div className="inputs-grid">
             <InputField label="Rapporto di compressione" value={values.r} onChange={(value) => updateInputs((prev) => ({ ...prev, r: value }))} accent={accentColor} />
@@ -206,4 +222,3 @@ const OttoPage = () => {
 };
 
 export default OttoPage;
-

@@ -9,6 +9,7 @@ import SchematicDiagram from './shared/SchematicDiagram';
 import { plotLayout, plotConfig, addTrace, addDomeTrace, addFillTrace, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 import { calcRankineCycle } from '../utils/rankineCycles';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#38BDF8';
 const PATH_COLORS = ['#60A5FA', '#F97316', '#EF4444', '#22D3EE', '#A78BFA', '#F59E0B'];
@@ -323,15 +324,24 @@ const RankinePage = () => {
     setLoading(true);
     setError(null);
     try {
-      const cycle = await calcRankineCycle({
-        ...inputs,
+      setResults(await resolveCycleDisplayResult({
+        cycleId: 'rankine',
         variant,
-      });
-
-      setResults({
-        ...cycle,
-        pointLabels: getPointLabels(variant),
-      });
+        family: 'steam',
+        primaryFluid: 'Water',
+        inputs: {
+          ...inputs,
+          variant,
+        },
+        computeLocalResult: async () => calcRankineCycle({
+          ...inputs,
+          variant,
+        }),
+        mapResultToDisplay: (cycle) => ({
+          ...cycle,
+          pointLabels: getPointLabels(variant),
+        }),
+      }));
     } catch (calculationError) {
       setError(
         variant === 'reheat'
@@ -439,6 +449,7 @@ const RankinePage = () => {
       EmptyIcon={Flame}
       emptyText="Seleziona la variante del Rankine e imposta pressioni, rendimenti e, se serve, surriscaldamento o risurriscaldamento."
       modeOptions={modeOptions}
+      solverMeta={results?.solverMeta}
       presets={presetMap[variant]}
       onApplyPreset={(values) => setInputs((current) => ({ ...current, ...values }))}
       insights={{

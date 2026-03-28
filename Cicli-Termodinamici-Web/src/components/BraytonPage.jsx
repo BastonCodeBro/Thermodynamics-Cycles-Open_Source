@@ -5,6 +5,7 @@ import InputField from './shared/InputField';
 import IdealGasCyclePage from './shared/IdealGasCyclePage';
 import { calcBraytonCycle, calcRegenerativeBraytonCycle } from '../utils/idealGas';
 import { pointAnnotations } from './shared/plotConfig';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#818CF8';
 const MODES = {
@@ -60,6 +61,62 @@ const presetMap = {
     { label: 'Caso esame', values: { p_low: 1, beta: 7.5, t_min: 20, t_max: 1020, eta_c: 0.86, eta_t: 0.89, epsilon_reg: 0.8, mass_flow: 1.2 } },
     { label: 'Caso inefficiente', values: { p_low: 1, beta: 12, t_min: 30, t_max: 980, eta_c: 0.76, eta_t: 0.82, epsilon_reg: 0.35, mass_flow: 1 } },
   ],
+};
+
+const buildBraytonDisplayResult = (cycle, values, activeMode) => {
+  const pointLabels = activeMode === 'regenerative'
+    ? ['1 Ingresso compressore', '2 Uscita compressore', '5 Uscita rigeneratore', '3 Ingresso turbina', '4 Uscita turbina', '6 Scarico rigenerato']
+    : ['1 Aspirazione', '2 Uscita compressore', '3 Ingresso turbina', '4 Scarico turbina'];
+
+  const formulas = activeMode === 'regenerative'
+    ? [
+      { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
+      { label: 'Efficacia rigeneratore', latex: '\\epsilon_{reg} = \\frac{T_5 - T_2}{T_4 - T_2}', value: cycle.stats.epsilon_reg, unit: '%' },
+      { label: 'Calore nel combustore', latex: 'q_{in} = c_p (T_3 - T_5)', value: cycle.stats.q_in },
+      { label: 'Guadagno dal rigeneratore', latex: 'q_{rec} = c_p (T_5 - T_2)', value: cycle.stats.regen_gain },
+      { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
+    ]
+    : [
+      { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
+      { label: '1 -> 2', description: 'Compressione politropica reale nel compressore' },
+      { label: '2 -> 3', description: 'Apporto di calore a pressione costante' },
+      { label: '3 -> 4', description: 'Espansione politropica reale in turbina' },
+      { label: '4 -> 1', description: 'Cessione di calore a pressione costante' },
+      { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: cycle.stats.wc },
+      { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: cycle.stats.wt },
+      { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
+      { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
+    ];
+
+  return {
+    allPoints: cycle.realPoints,
+    idealPoints: cycle.idealPoints,
+    schematicType: MODES[activeMode].schematicType,
+    pointLabels,
+    summaryItems: [
+      { label: 'Lavoro compressore', value: `${cycle.stats.wc.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+      { label: 'Lavoro turbina', value: `${cycle.stats.wt.toFixed(1)} kJ/kg`, color: '#34D399' },
+      { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
+      ...(activeMode === 'regenerative'
+        ? [{ label: 'Guadagno rig.', value: `${cycle.stats.regen_gain.toFixed(1)} kJ/kg`, color: '#22D3EE' }]
+        : []),
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+    statCards: [
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+      { label: 'Potenza netta', value: `${cycle.stats.power.toFixed(2)} kW` },
+      { label: 'BWR', value: `${cycle.stats.bwr.toFixed(1)}%` },
+      { label: activeMode === 'regenerative' ? 'Recupero' : 'Calore in', value: activeMode === 'regenerative' ? `${cycle.stats.regen_gain.toFixed(1)} kJ/kg` : `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
+    ],
+    formulas,
+    pdfTitle: activeMode === 'regenerative' ? 'Brayton rigenerativo' : 'Brayton-Joule',
+    formulaPointLabels: pointLabels,
+    pdfPointLabels: pointLabels,
+    pdfFormulas: formulas,
+    stats: cycle.stats,
+  };
 };
 
 const BraytonPage = () => {
@@ -120,114 +177,86 @@ const BraytonPage = () => {
       plotDefinitions={plotDefinitions}
       getPathOptions={({ mode: activeMode }) => activeMode === 'regenerative'
         ? {
-          real: [
-            { processType: 'polytropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'polytropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-          ],
-          ideal: [
-            { processType: 'isentropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isentropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-          ],
-        }
+            real: [
+              { processType: 'polytropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'polytropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+            ],
+            ideal: [
+              { processType: 'isentropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isentropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+            ],
+          }
         : {
-          real: [
-            { processType: 'polytropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'polytropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-          ],
-          ideal: [
-            { processType: 'isentropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-            { processType: 'isentropic', model: 'ideal-gas' },
-            { processType: 'isobaric', model: 'ideal-gas' },
-          ],
-        }}
-      buildResult={async (values, activeMode) => {
+            real: [
+              { processType: 'polytropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'polytropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+            ],
+            ideal: [
+              { processType: 'isentropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+              { processType: 'isentropic', model: 'ideal-gas' },
+              { processType: 'isobaric', model: 'ideal-gas' },
+            ],
+          }}
+      resolveResult={async (values, activeMode) => {
         const pHigh = values.p_low * values.beta;
-        const cycle = activeMode === 'regenerative'
-          ? calcRegenerativeBraytonCycle({
-            p1Bar: values.p_low,
-            t1C: values.t_min,
-            p2Bar: pHigh,
-            t3C: values.t_max,
-            etaComp: values.eta_c,
-            etaTurb: values.eta_t,
-            epsilonReg: values.epsilon_reg,
-            massFlow: values.mass_flow,
-          })
-          : calcBraytonCycle({
-            p1Bar: values.p_low,
-            t1C: values.t_min,
-            p2Bar: pHigh,
-            t3C: values.t_max,
-            etaComp: values.eta_c,
-            etaTurb: values.eta_t,
-            massFlow: values.mass_flow,
-          });
 
-        const points = cycle.realPoints;
-        const pointLabels = activeMode === 'regenerative'
-          ? ['1 Ingresso compressore', '2 Uscita compressore', '5 Uscita rigeneratore', '3 Ingresso turbina', '4 Uscita turbina', '6 Scarico rigenerato']
-          : ['1 Aspirazione', '2 Uscita compressore', '3 Ingresso turbina', '4 Scarico turbina'];
-
-        const formulas = activeMode === 'regenerative'
-          ? [
-            { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
-            { label: 'Efficacia rigeneratore', latex: '\\epsilon_{reg} = \\frac{T_5 - T_2}{T_4 - T_2}', value: cycle.stats.epsilon_reg, unit: '%' },
-            { label: 'Calore nel combustore', latex: 'q_{in} = c_p (T_3 - T_5)', value: cycle.stats.q_in },
-            { label: 'Guadagno dal rigeneratore', latex: 'q_{rec} = c_p (T_5 - T_2)', value: cycle.stats.regen_gain },
-            { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
-          ]
-          : [
-            { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
-            { label: '1 → 2', description: 'Compressione politropica reale nel compressore' },
-            { label: '2 → 3', description: 'Apporto di calore a pressione costante' },
-            { label: '3 → 4', description: 'Espansione politropica reale in turbina' },
-            { label: '4 → 1', description: 'Cessione di calore a pressione costante' },
-            { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: cycle.stats.wc },
-            { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: cycle.stats.wt },
-            { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
-            { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
-          ];
-
-        return {
-          allPoints: points,
-          idealPoints: cycle.idealPoints,
-          schematicType: MODES[activeMode].schematicType,
-          pointLabels,
-          summaryItems: [
-            { label: 'Lavoro compressore', value: `${cycle.stats.wc.toFixed(1)} kJ/kg`, color: '#60A5FA' },
-            { label: 'Lavoro turbina', value: `${cycle.stats.wt.toFixed(1)} kJ/kg`, color: '#34D399' },
-            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
-            ...(activeMode === 'regenerative'
-              ? [{ label: 'Guadagno rig.', value: `${cycle.stats.regen_gain.toFixed(1)} kJ/kg`, color: '#22D3EE' }]
-              : []),
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
-          ],
-          statCards: [
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
-            { label: 'Potenza netta', value: `${cycle.stats.power.toFixed(2)} kW` },
-            { label: 'BWR', value: `${cycle.stats.bwr.toFixed(1)}%` },
-            { label: activeMode === 'regenerative' ? 'Recupero' : 'Calore in', value: activeMode === 'regenerative' ? `${cycle.stats.regen_gain.toFixed(1)} kJ/kg` : `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
-          ],
-          formulas,
-          pdfTitle: activeMode === 'regenerative' ? 'Brayton rigenerativo' : 'Brayton-Joule',
-          formulaPointLabels: pointLabels,
-          pdfPointLabels: pointLabels,
-          pdfFormulas: formulas,
-          stats: cycle.stats,
-        };
+        return resolveCycleDisplayResult({
+          cycleId: 'brayton',
+          variant: activeMode === 'regenerative' ? 'regenerative' : null,
+          family: 'ideal-gas',
+          inputs: activeMode === 'regenerative'
+            ? {
+                p1Bar: values.p_low,
+                t1C: values.t_min,
+                p2Bar: pHigh,
+                t3C: values.t_max,
+                etaComp: values.eta_c,
+                etaTurb: values.eta_t,
+                epsilonReg: values.epsilon_reg,
+                massFlow: values.mass_flow,
+              }
+            : {
+                p1Bar: values.p_low,
+                t1C: values.t_min,
+                p2Bar: pHigh,
+                t3C: values.t_max,
+                etaComp: values.eta_c,
+                etaTurb: values.eta_t,
+                massFlow: values.mass_flow,
+              },
+          computeLocalResult: async () => (activeMode === 'regenerative'
+            ? calcRegenerativeBraytonCycle({
+                p1Bar: values.p_low,
+                t1C: values.t_min,
+                p2Bar: pHigh,
+                t3C: values.t_max,
+                etaComp: values.eta_c,
+                etaTurb: values.eta_t,
+                epsilonReg: values.epsilon_reg,
+                massFlow: values.mass_flow,
+              })
+            : calcBraytonCycle({
+                p1Bar: values.p_low,
+                t1C: values.t_min,
+                p2Bar: pHigh,
+                t3C: values.t_max,
+                etaComp: values.eta_c,
+                etaTurb: values.eta_t,
+                massFlow: values.mass_flow,
+              })),
+          mapResultToDisplay: (cycle) => buildBraytonDisplayResult(cycle, values, activeMode),
+        });
       }}
       buildError={() => mode === 'regenerative'
         ? 'Controlla i dati: beta > 1, T massima > T ingresso, rendimenti tra 0 e 1 ed efficacia del rigeneratore compresa tra 0 e 1.'
@@ -238,7 +267,7 @@ const BraytonPage = () => {
           <p className="input-hint">
             {activeMode === 'regenerative'
               ? 'Nel Brayton rigenerativo controlla soprattutto il rapporto tra T4 e T2: il recupero funziona solo se i gas in uscita turbina restano abbastanza caldi.'
-              : 'Nel Brayton semplice il punto chiave è il compromesso tra lavoro di turbina, lavoro di compressore e calore richiesto nel combustore.'}
+              : 'Nel Brayton semplice il punto chiave e il compromesso tra lavoro di turbina, lavoro di compressore e calore richiesto nel combustore.'}
           </p>
           <div className="inputs-grid">
             <InputField label="Pressione iniziale" value={values.p_low} onChange={(value) => updateInputs((prev) => ({ ...prev, p_low: value }))} unit="bar" accent={accentColor} />
@@ -263,7 +292,7 @@ const BraytonPage = () => {
       presets={presetMap[mode]}
       insights={{
         takeaways: [
-          'Nel Brayton semplice il lavoro netto è la differenza tra turbina e compressore.',
+          'Nel Brayton semplice il lavoro netto e la differenza tra turbina e compressore.',
           'Un BWR alto significa che il compressore sta mangiando molta della potenza prodotta.',
           mode === 'regenerative'
             ? 'La rigenerazione riduce il combustibile richiesto ma solo se T4 rimane sopra T2.'
@@ -282,4 +311,3 @@ const BraytonPage = () => {
 };
 
 export default BraytonPage;
-

@@ -4,6 +4,7 @@ import InputField from './shared/InputField';
 import IdealGasCyclePage from './shared/IdealGasCyclePage';
 import { calcDualCycle } from '../utils/idealGas';
 import { pointAnnotations } from './shared/plotConfig';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#FB923C';
 
@@ -43,6 +44,50 @@ const presets = [
   { label: 'Caso esame', values: { r: 18, alpha: 1.5, rc: 1.25, p_low: 1, t_min: 20, eta_s: 0.9, mass_flow: 1.1 } },
   { label: 'Caso inefficiente', values: { r: 13, alpha: 1.25, rc: 1.45, p_low: 1, t_min: 35, eta_s: 0.76, mass_flow: 1 } },
 ];
+
+const buildDualDisplayResult = (cycle, values) => {
+  const netWork = cycle.stats.q_in - cycle.stats.q_out;
+
+  return {
+    allPoints: cycle.points,
+    idealPoints: cycle.idealPoints,
+    schematicType: 'dual',
+    pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine calore CV', '4 Fine calore CP', '5 Fine espansione'],
+    summaryItems: [
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
+      { label: 'Calore isocoro', value: `${cycle.stats.q_in_cv.toFixed(1)} kJ/kg`, color: '#F97316' },
+      { label: 'Calore isobaro', value: `${cycle.stats.q_in_cp.toFixed(1)} kJ/kg`, color: '#22D3EE' },
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+    ],
+    statCards: [
+      { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+      { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
+      { label: 'T massima', value: `${cycle.points[3].t.toFixed(0)} degC` },
+      { label: 'Calore totale', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
+    ],
+    formulas: [
+      { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
+      { label: 'Rapporto di pressione isocora', latex: '\\alpha = \\frac{P_3}{P_2}', value: values.alpha },
+      { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_4}{v_3}', value: values.rc },
+      { label: '2 -> 3', description: 'Apporto di calore a volume costante' },
+      { label: '3 -> 4', description: 'Apporto di calore a pressione costante' },
+      { label: 'Calore isocoro', latex: 'q_{cv} = c_v (T_3 - T_2)', value: cycle.stats.q_in_cv },
+      { label: 'Calore isobaro', latex: 'q_{cp} = c_p (T_4 - T_3)', value: cycle.stats.q_in_cp },
+      { label: 'Calore totale', latex: 'q_{in} = q_{cv} + q_{cp}', value: cycle.stats.q_in },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
+    ],
+    pdfTitle: 'Duale o Sabathe',
+    formulaPointLabels: ['1', '2', '3', '4', '5'],
+    pdfPointLabels: ['1', '2', '3', '4', '5'],
+    pdfFormulas: [
+      { label: 'Calore isocoro', latex: 'q_{cv} = c_v (T_3 - T_2)', value: cycle.stats.q_in_cv },
+      { label: 'Calore isobaro', latex: 'q_{cp} = c_p (T_4 - T_3)', value: cycle.stats.q_in_cp },
+      { label: 'Calore totale', latex: 'q_{in} = q_{cv} + q_{cp}', value: cycle.stats.q_in },
+      { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}}', value: cycle.stats.eta },
+    ],
+    stats: cycle.stats,
+  };
+};
 
 const DualPage = () => {
   const [inputs, setInputs] = useState({
@@ -98,8 +143,10 @@ const DualPage = () => {
           { processType: 'isochoric', model: 'ideal-gas' },
         ],
       })}
-      buildResult={async (values) => {
-        const cycle = calcDualCycle({
+      resolveResult={async (values) => resolveCycleDisplayResult({
+        cycleId: 'dual',
+        family: 'ideal-gas',
+        inputs: {
           p1Bar: values.p_low,
           t1C: values.t_min,
           r: values.r,
@@ -107,48 +154,18 @@ const DualPage = () => {
           rc: values.rc,
           eta: values.eta_s,
           massFlow: values.mass_flow,
-        });
-        const netWork = cycle.stats.q_in - cycle.stats.q_out;
-        return {
-          allPoints: cycle.points,
-          idealPoints: cycle.idealPoints,
-          schematicType: 'dual',
-          pointLabels: ['1 Inizio compressione', '2 Fine compressione', '3 Fine calore CV', '4 Fine calore CP', '5 Fine espansione'],
-          summaryItems: [
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg`, color: COLOR },
-            { label: 'Calore isocoro', value: `${cycle.stats.q_in_cv.toFixed(1)} kJ/kg`, color: '#F97316' },
-            { label: 'Calore isobaro', value: `${cycle.stats.q_in_cp.toFixed(1)} kJ/kg`, color: '#22D3EE' },
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
-          ],
-          statCards: [
-            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
-            { label: 'Lavoro netto', value: `${netWork.toFixed(1)} kJ/kg` },
-            { label: 'T massima', value: `${cycle.points[3].t.toFixed(0)} degC` },
-            { label: 'Calore totale', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
-          ],
-          formulas: [
-            { label: 'Rapporto di compressione', latex: 'r = \\frac{v_1}{v_2}', value: values.r },
-            { label: 'Rapporto di pressione isocora', latex: '\\alpha = \\frac{P_3}{P_2}', value: values.alpha },
-            { label: 'Rapporto di cut-off', latex: 'r_c = \\frac{v_4}{v_3}', value: values.rc },
-            { label: '2 → 3', description: 'Apporto di calore a volume costante' },
-            { label: '3 → 4', description: 'Apporto di calore a pressione costante' },
-            { label: 'Calore isocoro', latex: 'q_{cv} = c_v (T_3 - T_2)', value: cycle.stats.q_in_cv },
-            { label: 'Calore isobaro', latex: 'q_{cp} = c_p (T_4 - T_3)', value: cycle.stats.q_in_cp },
-            { label: 'Calore totale', latex: 'q_{in} = q_{cv} + q_{cp}', value: cycle.stats.q_in },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
-          ],
-          pdfTitle: 'Duale o Sabathe',
-          formulaPointLabels: ['1', '2', '3', '4', '5'],
-          pdfPointLabels: ['1', '2', '3', '4', '5'],
-          pdfFormulas: [
-            { label: 'Calore isocoro', latex: 'q_{cv} = c_v (T_3 - T_2)', value: cycle.stats.q_in_cv },
-            { label: 'Calore isobaro', latex: 'q_{cp} = c_p (T_4 - T_3)', value: cycle.stats.q_in_cp },
-            { label: 'Calore totale', latex: 'q_{in} = q_{cv} + q_{cp}', value: cycle.stats.q_in },
-            { label: 'Rendimento reale', latex: '\\eta = \\frac{q_{in} - q_{out}}{q_{in}}', value: cycle.stats.eta },
-          ],
-          stats: cycle.stats,
-        };
-      }}
+        },
+        computeLocalResult: async () => calcDualCycle({
+          p1Bar: values.p_low,
+          t1C: values.t_min,
+          r: values.r,
+          alpha: values.alpha,
+          rc: values.rc,
+          eta: values.eta_s,
+          massFlow: values.mass_flow,
+        }),
+        mapResultToDisplay: (cycle) => buildDualDisplayResult(cycle, values),
+      })}
       buildError={() => 'Controlla i dati: r, alpha e rc devono essere maggiori di 1 e il rendimento isentropico deve restare tra 0 e 1.'}
       renderInputs={({ inputs: values, setInputs: updateInputs, accentColor }) => (
         <>
@@ -176,9 +193,9 @@ const DualPage = () => {
         takeaways: [
           'Il Duale somma una fase isocora e una isobara: per questo cade tra Otto e Diesel.',
           'Separare q_cv e q_cp aiuta a capire quanto della combustione avviene vicino al PMS.',
-          'A parità di r, aumentare alpha intensifica la quota isocora mentre rc allunga la parte isobara.',
+          'A parita di r, aumentare alpha intensifica la quota isocora mentre rc allunga la parte isobara.',
         ],
-        commonMistake: 'Usare alpha e rc come se controllassero la stessa cosa: alpha agisce sul salto di pressione isocoro, rc sull\'estensione della fase isobara.',
+        commonMistake: 'Usare alpha e rc come se controllassero la stessa cosa: alpha agisce sul salto di pressione isocoro, rc sull estensione della fase isobara.',
       }}
       legendItems={[
         { label: 'Calore isocoro', color: '#F97316' },
@@ -191,4 +208,3 @@ const DualPage = () => {
 };
 
 export default DualPage;
-

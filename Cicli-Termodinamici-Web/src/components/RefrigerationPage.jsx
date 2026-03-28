@@ -10,6 +10,7 @@ import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
 import { plotLayout, plotConfig, addTrace, addDomeTrace, pointAnnotations } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#10B981';
 const SEGMENT_COLORS = ['#10B981', '#EF4444', '#60A5FA', '#A78BFA'];
@@ -174,45 +175,64 @@ const RefrigerationPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const st1sat = await solveFluid({ t: inputs.t_evap, q: 1 }, refrigerant);
-      const st1 = await solveFluid({ p: st1sat.p, t: inputs.t_evap + inputs.sh }, refrigerant);
-      const st3sat = await solveFluid({ t: inputs.t_cond, q: 0 }, refrigerant);
-      const st2s = await solveFluid({ p: st3sat.p, s: st1.s }, refrigerant);
-      const h2r = st1.h + (st2s.h - st1.h) / inputs.eta_s;
-      const st2r = await solveFluid({ p: st3sat.p, h: h2r }, refrigerant);
-      const st3 = await solveFluid({ p: st3sat.p, t: inputs.t_cond - inputs.sc }, refrigerant);
-      const st4 = await solveFluid({ p: st1sat.p, h: st3.h }, refrigerant);
-
-      const win = st2r.h - st1.h;
-      const qlow = st1.h - st4.h;
-      const qhigh = st2r.h - st3.h;
-      const domeFull = await getSaturationDomeFull(refrigerant);
-      const [segmentPaths, idealCompPath] = await Promise.all([
-        Promise.all([
-          generateProcessPath(st1, st2r, refrigerant),
-          generateProcessPath(st2r, st3, refrigerant),
-          generateProcessPath(st3, st4, refrigerant),
-          generateProcessPath(st4, st1, refrigerant),
-        ]),
-        generateProcessPath(st1, st2s, refrigerant),
-      ]);
-
-      setResults({
-        allPoints: [st1, st2r, st3, st4],
-        idealPoint2s: st2s,
-        segmentPaths,
-        idealCompPath,
-        stats: {
-          win,
-          qlow,
-          qhigh,
-          cop: qlow / win,
-          cop_hp: qhigh / win,
-          useful_capacity: (mode === 'heat-pump' ? qhigh : qlow) * inputs.mass_flow,
+      setResults(await resolveCycleDisplayResult({
+        cycleId: 'vapor-compression',
+        mode,
+        family: 'refrigeration',
+        primaryFluid: refrigerant,
+        inputs: {
+          ...inputs,
+          refrigerant,
         },
-        dome: domeFull.ts,
-        domePh: domeFull.ph,
-      });
+        computeLocalResult: async () => {
+          const st1sat = await solveFluid({ t: inputs.t_evap, q: 1 }, refrigerant);
+          const st1 = await solveFluid({ p: st1sat.p, t: inputs.t_evap + inputs.sh }, refrigerant);
+          const st3sat = await solveFluid({ t: inputs.t_cond, q: 0 }, refrigerant);
+          const st2s = await solveFluid({ p: st3sat.p, s: st1.s }, refrigerant);
+          const h2r = st1.h + (st2s.h - st1.h) / inputs.eta_s;
+          const st2r = await solveFluid({ p: st3sat.p, h: h2r }, refrigerant);
+          const st3 = await solveFluid({ p: st3sat.p, t: inputs.t_cond - inputs.sc }, refrigerant);
+          const st4 = await solveFluid({ p: st1sat.p, h: st3.h }, refrigerant);
+
+          const win = st2r.h - st1.h;
+          const qlow = st1.h - st4.h;
+          const qhigh = st2r.h - st3.h;
+          const domeFull = await getSaturationDomeFull(refrigerant);
+          const [segmentPaths, idealCompPath] = await Promise.all([
+            Promise.all([
+              generateProcessPath(st1, st2r, refrigerant),
+              generateProcessPath(st2r, st3, refrigerant),
+              generateProcessPath(st3, st4, refrigerant),
+              generateProcessPath(st4, st1, refrigerant),
+            ]),
+            generateProcessPath(st1, st2s, refrigerant),
+          ]);
+
+          return {
+            allPoints: [st1, st2r, st3, st4],
+            idealPoint2s: st2s,
+            segmentPaths,
+            idealCompPath,
+            stats: {
+              win,
+              qlow,
+              qhigh,
+              cop: qlow / win,
+              cop_hp: qhigh / win,
+              useful_capacity: (mode === 'heat-pump' ? qhigh : qlow) * inputs.mass_flow,
+            },
+            dome: domeFull.ts,
+            domePh: domeFull.ph,
+          };
+        },
+        mapResultToDisplay: (cycle) => ({
+          ...cycle,
+          stats: {
+            ...cycle.stats,
+            useful_capacity: (mode === 'heat-pump' ? cycle.stats.qhigh : cycle.stats.qlow) * inputs.mass_flow,
+          },
+        }),
+      }));
     } catch (calculationError) {
       setError('Controlla il salto termico tra evaporazione e condensazione: il ciclo deve avere una sorgente calda più alta della fredda e stati fisicamente accessibili per il refrigerante scelto.');
       console.error(calculationError);
@@ -336,6 +356,7 @@ const RefrigerationPage = () => {
       EmptyIcon={Snowflake}
       emptyText="Scegli refrigerante e condizioni operative per leggere il ciclo sul lato freddo o sul lato caldo."
       modeOptions={modeOptions}
+      solverMeta={results?.solverMeta}
       activeMode={mode}
       presets={presetMap[mode]}
       onApplyPreset={(values) => setInputs((current) => ({ ...current, ...values }))}

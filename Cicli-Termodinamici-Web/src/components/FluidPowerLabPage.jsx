@@ -33,6 +33,10 @@ import {
   serializeProjectDocument,
 } from '../utils/fluidPowerProject';
 import {
+  getProfessionalSolverConfig,
+  resolveFluidPowerSnapshot,
+} from '../utils/fluidPowerProfessionalAdapter';
+import {
   createFluidPowerReducerState,
   fluidPowerReducer,
 } from '../utils/fluidPowerReducer';
@@ -527,6 +531,11 @@ const getConnectionTooltipAnchor = (points) => {
     y: (current.y + previous.y) / 2,
   };
 };
+
+const getEditablePathPointIndexes = (points) =>
+  points
+    .map((_, index) => index)
+    .filter((index) => index > 0 && index < points.length - 1);
 
 const describeActuatorState = (node, component) => {
   const routeInfo = getValveRouteInfo(node, component);
@@ -1182,7 +1191,6 @@ const buildNodeTechnicalDetails = (
     selectedNodeId: node.instanceId,
     valveCommandType,
     hoverSections: [
-      { id: 'base', label: 'Identificazione', rows: baseRows },
       { id: 'spec', label: 'Caratteristiche nominali', rows: specRows },
       { id: 'live', label: 'Dati live', rows: operatingRows },
     ].filter((section) => section.rows.length > 0),
@@ -1244,8 +1252,10 @@ const FluidPowerLabPage = () => {
   const [storageStatus, setStorageStatus] = useState('Autosave locale pronto.');
   const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
+  const [draggingConnectionHandle, setDraggingConnectionHandle] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [hoveredConnectionId, setHoveredConnectionId] = useState(null);
+  const [isSolving, setIsSolving] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
 
@@ -1254,6 +1264,7 @@ const FluidPowerLabPage = () => {
   const domain = selectActiveDomain(fluidState);
   const workspace = selectActiveWorkspace(fluidState);
   const domainMeta = getDomainMeta(domain);
+  const solverConfig = useMemo(() => getProfessionalSolverConfig(), []);
   const groups = useMemo(() => paletteGroups(domain, search), [domain, search]);
   const hasSearch = search.trim().length > 0;
   const measurementMap = useMemo(() => selectMeasurementMap(fluidState), [fluidState]);
@@ -1406,6 +1417,39 @@ const FluidPowerLabPage = () => {
     }));
   }, [updateWorkspace]);
 
+  const runResolvedSimulation = useCallback(async (nodes, connections) => {
+    const currentValidation = validateCircuit(nodes, connections, domain);
+
+    if (!currentValidation.valid) {
+      updateWorkspace((current) => ({
+        ...current,
+        snapshot: {
+          ...createWorkspace().snapshot,
+          warnings: currentValidation.warnings,
+        },
+        message: currentValidation.warnings[0],
+      }));
+      return;
+    }
+
+    setIsSolving(true);
+
+    try {
+      const { snapshot, solverMeta } = await resolveFluidPowerSnapshot(nodes, connections, domain);
+
+      updateWorkspace((current) => ({
+        ...current,
+        snapshot: {
+          ...snapshot,
+          solverMeta,
+        },
+        message: snapshot.warnings[0] ?? 'Schema pronto.',
+      }));
+    } finally {
+      setIsSolving(false);
+    }
+  }, [domain, updateWorkspace]);
+
   const addNode = (componentId, dropPosition) => {
     const component = getComponentDefinition(componentId);
     if (!component) {
@@ -1486,6 +1530,62 @@ const FluidPowerLabPage = () => {
       window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [draggingNode, domain, refreshPaths, updateWorkspace]);
+
+  useEffect(() => {
+    if (!draggingConnectionHandle) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event) => {
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (!canvasRect) {
+        return;
+      }
+
+      updateWorkspace((current) => ({
+        ...current,
+        connections: current.connections.map((connection) => {
+          if (connection.id !== draggingConnectionHandle.connectionId) {
+            return connection;
+          }
+
+          const nextPoints = connection.pathPoints.map((point, index) => {
+            if (index !== draggingConnectionHandle.pointIndex) {
+              return point;
+            }
+
+            return {
+              x: Math.min(
+                Math.max(CANVAS_PADDING, snap(event.clientX - canvasRect.left)),
+                CANVAS_WIDTH - CANVAS_PADDING,
+              ),
+              y: Math.min(
+                Math.max(CANVAS_PADDING, snap(event.clientY - canvasRect.top)),
+                CANVAS_HEIGHT - CANVAS_PADDING,
+              ),
+            };
+          });
+
+          return {
+            ...connection,
+            pathPoints: nextPoints,
+          };
+        }),
+      }));
+    };
+
+    const handlePointerUp = () => {
+      setDraggingConnectionHandle(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [draggingConnectionHandle, updateWorkspace]);
 
   const handleNodePointerDown = (event, node) => {
     if (event.target.closest('[data-port-button="true"]') || event.target.closest('button')) {
@@ -1685,46 +1785,32 @@ const FluidPowerLabPage = () => {
   };
 
   const startSimulation = () => {
-    updateWorkspace((current) => {
-      const currentValidation = validateCircuit(current.nodes, current.connections, domain);
-      if (!currentValidation.valid) {
-        return {
-          ...current,
-          snapshot: {
-            ...createWorkspace().snapshot,
-            warnings: currentValidation.warnings,
-          },
-          message: currentValidation.warnings[0],
-        };
-      }
-
-      const snapshot = buildSimulationFlow(current.nodes, current.connections, domain);
-      return {
-        ...current,
-        snapshot,
-        message: snapshot.warnings[0] ?? 'Schema pronto.',
-      };
-    });
+    void runResolvedSimulation(workspace.nodes, workspace.connections);
   };
 
   const toggleValve = (nodeId) => {
+    const nextNodes = applyValveState(workspace.nodes, nodeId);
+    const valveNode = nextNodes.find((node) => node.instanceId === nodeId);
+    const valveComponent = valveNode ? getComponentDefinition(valveNode.componentId) : null;
+
     updateWorkspace((current) => {
-      const nodes = applyValveState(current.nodes, nodeId);
-      const valveNode = nodes.find((node) => node.instanceId === nodeId);
-      const valveComponent = valveNode ? getComponentDefinition(valveNode.componentId) : null;
       const snapshot = current.snapshot.isRunning
-        ? buildSimulationFlow(nodes, current.connections, domain)
+        ? buildSimulationFlow(nextNodes, current.connections, domain)
         : current.snapshot;
 
       return {
         ...current,
-        nodes,
+        nodes: nextNodes,
         snapshot,
         message: valveNode && valveComponent
           ? `Distributore commutato su ${describeActuatorState(valveNode, valveComponent)}.`
           : current.message,
       };
     });
+
+    if (workspace.snapshot.isRunning && solverConfig.enabled) {
+      void runResolvedSimulation(nextNodes, workspace.connections);
+    }
   };
 
   return (
@@ -1870,9 +1956,9 @@ const FluidPowerLabPage = () => {
           <div className="fluid-toolbar glass">
             <div className="fluid-toolbar-top">
               <div className="fluid-toolbar-actions">
-                <button className="btn-primary fluid-toolbar-btn" onClick={startSimulation}>
+                <button className="btn-primary fluid-toolbar-btn" onClick={startSimulation} disabled={isSolving}>
                   <Play size={18} />
-                  Avvia schema
+                  {isSolving ? 'Calcolo...' : 'Avvia schema'}
                 </button>
                 <button className="btn-outline fluid-toolbar-btn" onClick={resetSimulation}>
                   <RotateCcw size={18} />
@@ -1902,7 +1988,17 @@ const FluidPowerLabPage = () => {
                 </div>
                 <div className="fluid-status-chip">
                   <Activity size={16} />
-                  <span>{workspace.snapshot.isRunning ? 'Schema attivo' : 'Schema fermo'}</span>
+                  <span>{isSolving ? 'Calcolo in corso' : workspace.snapshot.isRunning ? 'Schema attivo' : 'Schema fermo'}</span>
+                </div>
+                <div className="fluid-status-chip">
+                  <Waves size={16} />
+                  <span>
+                    {workspace.snapshot.solverMeta?.source === 'external' && !workspace.snapshot.solverMeta?.usedFallback
+                      ? 'Solver esterno'
+                      : solverConfig.enabled
+                        ? 'Fallback locale'
+                        : 'Solver locale'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1910,6 +2006,11 @@ const FluidPowerLabPage = () => {
             <div className="fluid-storage-note">
               <strong>Workspace locale</strong>
               <span>Una sola vista di lavoro con autosave del circuito corrente nel browser.</span>
+              <span>
+                {solverConfig.enabled
+                  ? `Backend solver configurato: ${solverConfig.endpoint}`
+                  : 'Nessun backend professionale configurato: attivo solver locale.'}
+              </span>
               <em>{storageStatus}</em>
             </div>
           </div>
@@ -1953,6 +2054,7 @@ const FluidPowerLabPage = () => {
                     const isSelected =
                       workspace.selectedEntity?.type === 'connection' &&
                       workspace.selectedEntity.id === connection.id;
+                    const showPathHandles = isSelected || hoveredConnectionId === connection.id;
                     const flowArrows = isActive && !isMechanical
                       ? computeFlowArrows(connection.pathPoints, {
                         arrowSize: 12,
@@ -1992,6 +2094,31 @@ const FluidPowerLabPage = () => {
                             opacity="0.92"
                           />
                         ))}
+                        {showPathHandles &&
+                          getEditablePathPointIndexes(connection.pathPoints).map((pointIndex) => {
+                            const point = connection.pathPoints[pointIndex];
+
+                            return (
+                              <circle
+                                key={`${connection.id}-handle-${pointIndex}`}
+                                className="fluid-connection-handle"
+                                cx={point.x}
+                                cy={point.y}
+                                r="7"
+                                onPointerDown={(event) => {
+                                  event.stopPropagation();
+                                  setDraggingConnectionHandle({
+                                    connectionId: connection.id,
+                                    pointIndex,
+                                  });
+                                  updateWorkspace((current) => ({
+                                    ...current,
+                                    selectedEntity: { type: 'connection', id: connection.id },
+                                  }));
+                                }}
+                              />
+                            );
+                          })}
                       </g>
                     );
                   })}
@@ -2131,37 +2258,29 @@ const FluidPowerLabPage = () => {
                             className="fluid-node-toggle fluid-node-toggle-throttle"
                             onClick={(e) => {
                               e.stopPropagation();
+                              const nextNodes = workspace.nodes.map((n) => {
+                                if (n.instanceId !== node.instanceId) {
+                                  return n;
+                                }
+                                const currentPct = Math.round((n.state?.flowMultiplier ?? 1.0) * 100);
+                                const nextPct = currentPct >= 100 ? 25 : currentPct >= 50 ? 100 : currentPct >= 25 ? 50 : 25;
+                                return {
+                                  ...n,
+                                  state: { ...n.state, flowMultiplier: nextPct / 100 },
+                                };
+                              });
+
                               updateWorkspace((current) => ({
                                 ...current,
-                                nodes: current.nodes.map((n) => {
-                                  if (n.instanceId !== node.instanceId) {
-                                    return n;
-                                  }
-                                  const currentPct = Math.round((n.state?.flowMultiplier ?? 1.0) * 100);
-                                  const nextPct = currentPct >= 100 ? 25 : currentPct >= 50 ? 100 : currentPct >= 25 ? 50 : 25;
-                                  return {
-                                    ...n,
-                                    state: { ...n.state, flowMultiplier: nextPct / 100 },
-                                  };
-                                }),
+                                nodes: nextNodes,
                                 snapshot: current.snapshot.isRunning
-                                  ? buildSimulationFlow(
-                                    current.nodes.map((n) => {
-                                      if (n.instanceId !== node.instanceId) {
-                                        return n;
-                                      }
-                                      const currentPct = Math.round((n.state?.flowMultiplier ?? 1.0) * 100);
-                                      const nextPct = currentPct >= 100 ? 25 : currentPct >= 50 ? 100 : currentPct >= 25 ? 50 : 25;
-                                      return {
-                                        ...n,
-                                        state: { ...n.state, flowMultiplier: nextPct / 100 },
-                                      };
-                                    }),
-                                    current.connections,
-                                    domain,
-                                  )
+                                  ? buildSimulationFlow(nextNodes, current.connections, domain)
                                   : createWorkspace().snapshot,
                               }));
+
+                              if (workspace.snapshot.isRunning && solverConfig.enabled) {
+                                void runResolvedSimulation(nextNodes, workspace.connections);
+                              }
                             }}
                             aria-label={`Apertura ${flowPct}%`}
                           >

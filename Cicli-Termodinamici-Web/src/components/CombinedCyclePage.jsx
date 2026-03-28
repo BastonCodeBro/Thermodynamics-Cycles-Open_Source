@@ -9,6 +9,7 @@ import { plotLayout, plotConfig, addTrace, addDomeTrace, addFillTrace, pointAnno
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 import { generateProcessPath } from '../utils/processPath';
 import { calcCombinedCycle } from '../utils/combinedCycle';
+import { resolveCycleDisplayResult } from '../utils/thermoCycleResolver';
 
 const COLOR = '#F59E0B';
 
@@ -135,7 +136,14 @@ const CombinedCyclePage = () => {
     setLoading(true);
     setError(null);
     try {
-      setResults(await calcCombinedCycle(inputs));
+      setResults(await resolveCycleDisplayResult({
+        cycleId: 'combined',
+        family: 'combined',
+        primaryFluid: 'Mixed',
+        inputs,
+        computeLocalResult: async () => calcCombinedCycle(inputs),
+        mapResultToDisplay: (cycle) => cycle,
+      }));
     } catch (calculationError) {
       setError('Controlla i dati: il blocco Brayton deve avere T turbina maggiore di T ingresso, e il blocco Rankine richiede P caldaia > P condensatore con rendimenti tra 0 e 1.');
       console.error(calculationError);
@@ -283,6 +291,7 @@ const CombinedCyclePage = () => {
       downloadingPDF={downloadingPDF}
       EmptyIcon={Factory}
       emptyText="Imposta il blocco gas e il blocco vapore per vedere come il recupero HRSG alza il rendimento globale."
+      solverMeta={results?.solverMeta}
       presets={[
         { label: 'Base', values: { p_low_air: 1, beta: 10, t_air_in: 20, t_turb_in: 1100, eta_c: 0.86, eta_t_gas: 0.89, mass_flow_gas: 3, eta_hrsg: 0.72, p_high_steam: 90, p_low_steam: 0.08, eta_t_steam: 0.86, eta_p_steam: 0.85 } },
         { label: 'Caso esame', values: { p_low_air: 1, beta: 11, t_air_in: 15, t_turb_in: 1150, eta_c: 0.87, eta_t_gas: 0.9, mass_flow_gas: 3.4, eta_hrsg: 0.76, p_high_steam: 100, p_low_steam: 0.07, eta_t_steam: 0.87, eta_p_steam: 0.86 } },

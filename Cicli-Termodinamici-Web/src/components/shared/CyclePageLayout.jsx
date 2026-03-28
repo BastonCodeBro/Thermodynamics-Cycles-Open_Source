@@ -24,7 +24,16 @@ const CyclePageLayout = ({
   onApplyPreset,
   insights,
   legendItems = [],
+  solverMeta,
 }) => {
+  const solverLabel = solverMeta
+    ? solverMeta.usedFallback
+      ? 'Fallback locale'
+      : solverMeta.source === 'external'
+        ? 'Solver esterno'
+        : 'Solver locale'
+    : null;
+
   return (
     <div className="features-section cycle-page">
       <div className="section-header section-header-left">
@@ -64,6 +73,15 @@ const CyclePageLayout = ({
                     <span>{item.label}</span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {solverMeta && (
+              <div className="solver-status-banner">
+                <span className={`solver-status-pill solver-status-${solverMeta.usedFallback ? 'fallback' : solverMeta.source === 'external' ? 'external' : 'local'}`}>
+                  {solverLabel}
+                </span>
+                <p>{solverMeta.detail}</p>
               </div>
             )}
           </div>
