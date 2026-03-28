@@ -164,4 +164,227 @@ describe('fluidPowerSimulation', () => {
     });
     expect(result.activeNodes).toContain('driver-1');
   });
+
+  test('reverses a double-acting hydraulic actuator without stopping the hydraulic routing logic', () => {
+    const nodes = [
+      {
+        instanceId: 'pump-2',
+        componentId: 'hydraulic-pump',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Pompa idraulica 2',
+        state: {},
+      },
+      {
+        instanceId: 'valve-2',
+        componentId: 'hydraulic-valve-4-2',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Valvola 4/2 bistabile 1',
+        state: { currentState: 'A+' },
+      },
+      {
+        instanceId: 'cylinder-2',
+        componentId: 'hydraulic-double-cylinder',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Cilindro a doppio effetto 1',
+        state: {},
+      },
+      {
+        instanceId: 'tank-2',
+        componentId: 'hydraulic-reservoir',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Serbatoio 2',
+        state: {},
+      },
+    ];
+    const connections = [
+      {
+        id: 'd1',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'pump-2', portId: 'P' },
+        to: { nodeId: 'valve-2', portId: 'P' },
+        pathPoints: [],
+      },
+      {
+        id: 'd2',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-2', portId: 'A' },
+        to: { nodeId: 'cylinder-2', portId: 'A' },
+        pathPoints: [],
+      },
+      {
+        id: 'd3',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-2', portId: 'B' },
+        to: { nodeId: 'cylinder-2', portId: 'B' },
+        pathPoints: [],
+      },
+      {
+        id: 'd4',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-2', portId: 'T' },
+        to: { nodeId: 'tank-2', portId: 'IN' },
+        pathPoints: [],
+      },
+    ];
+
+    const extension = buildSimulationFlow(nodes, connections, 'hydraulic');
+    const retraction = buildSimulationFlow(applyValveState(nodes, 'valve-2'), connections, 'hydraulic');
+
+    expect(extension.actuatorAction).toBe('estensione');
+    expect(extension.connectionStates.d2.phase).toBe('pressure');
+    expect(extension.connectionStates.d3.phase).toBe('return');
+    expect(extension.connectionStates.d2.fluidPowerKw).toBeGreaterThan(0);
+
+    expect(retraction.actuatorAction).toBe('ritrazione');
+    expect(retraction.connectionStates.d3.phase).toBe('pressure');
+    expect(retraction.connectionStates.d2.phase).toBe('return');
+    expect(retraction.connectionStates.d3.fluidPowerKw).toBeGreaterThan(0);
+  });
+
+  test('reduces timing and branch power when a flow control is throttled', () => {
+    const nodes = [
+      baseNodes[0],
+      { ...baseNodes[1], state: { currentState: 'attiva' } },
+      baseNodes[2],
+      baseNodes[3],
+      {
+        instanceId: 'fc-1',
+        componentId: 'hydraulic-flow-control',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Regolatore di flusso 1',
+        state: { flowMultiplier: 0.25 },
+      },
+    ];
+    const connections = [
+      baseConnections[0],
+      {
+        id: 'fc2',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-1', portId: 'A' },
+        to: { nodeId: 'fc-1', portId: 'IN' },
+        pathPoints: [],
+      },
+      {
+        id: 'fc3',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'fc-1', portId: 'OUT' },
+        to: { nodeId: 'cylinder-1', portId: 'A' },
+        pathPoints: [],
+      },
+      baseConnections[2],
+    ];
+
+    const result = buildSimulationFlow(nodes, connections, 'hydraulic');
+
+    expect(result.actuatorTiming.actualStrokeTime).toBeGreaterThan(2);
+    expect(result.connectionStates.fc2.flowRate).toBeLessThan(22);
+    expect(result.connectionStates.fc2.fluidPowerKw).toBeLessThan(result.connectionStates.c1.fluidPowerKw);
+  });
+
+  test('uses pneumatic pressure levels for a compressed-air circuit', () => {
+    const nodes = [
+      {
+        instanceId: 'comp-1',
+        componentId: 'pneumatic-compressor',
+        domain: 'pneumatic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Compressore 1',
+        state: {},
+      },
+      {
+        instanceId: 'valve-p-1',
+        componentId: 'pneumatic-valve-4-2',
+        domain: 'pneumatic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Valvola 5/2 1',
+        state: { currentState: 'A+' },
+      },
+      {
+        instanceId: 'cyl-p-1',
+        componentId: 'pneumatic-double-cylinder',
+        domain: 'pneumatic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Cilindro pneumatico 1',
+        state: {},
+      },
+      {
+        instanceId: 'exhaust-1',
+        componentId: 'pneumatic-exhaust',
+        domain: 'pneumatic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Scarico 1',
+        state: {},
+      },
+    ];
+    const connections = [
+      {
+        id: 'p1',
+        domain: 'pneumatic',
+        kind: 'fluid',
+        from: { nodeId: 'comp-1', portId: 'P' },
+        to: { nodeId: 'valve-p-1', portId: 'P' },
+        pathPoints: [],
+      },
+      {
+        id: 'p2',
+        domain: 'pneumatic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-p-1', portId: 'A' },
+        to: { nodeId: 'cyl-p-1', portId: 'A' },
+        pathPoints: [],
+      },
+      {
+        id: 'p3',
+        domain: 'pneumatic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-p-1', portId: 'B' },
+        to: { nodeId: 'cyl-p-1', portId: 'B' },
+        pathPoints: [],
+      },
+      {
+        id: 'p4',
+        domain: 'pneumatic',
+        kind: 'fluid',
+        from: { nodeId: 'valve-p-1', portId: 'R' },
+        to: { nodeId: 'exhaust-1', portId: 'R' },
+        pathPoints: [],
+      },
+    ];
+
+    const result = buildSimulationFlow(nodes, connections, 'pneumatic');
+
+    expect(result.valid).toBe(true);
+    expect(result.connectionStates.p1.pressureIn).toBeLessThan(10);
+    expect(result.connectionStates.p1.flowRate).toBeGreaterThan(100);
+    expect(result.actuatorAction).toBe('estensione');
+  });
 });

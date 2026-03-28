@@ -21,6 +21,7 @@ import FluidPowerSymbol from './fluidPower/FluidPowerSymbol';
 import {
   applyValveState,
   buildSimulationFlow,
+  getDomainSignalDefaults,
   getValveRouteInfo,
   validateCircuit,
 } from '../utils/fluidPowerSimulation';
@@ -297,7 +298,7 @@ const sampleArrowAtDistance = (points, targetDistance, arrowSize = 7) => {
 };
 
 const computeFlowArrows = (points, {
-  arrowSize = 7,
+  arrowSize = 12,
   reverse = false,
 } = {}) => {
   if (!points || points.length < 2) {
@@ -307,11 +308,11 @@ const computeFlowArrows = (points, {
   const workingPoints = reverse ? [...points].reverse() : points;
   const { totalLength } = buildSegments(workingPoints);
 
-  if (totalLength < 56) {
+  if (totalLength < 48) {
     return [];
   }
 
-  const arrowCount = Math.max(1, Math.min(4, Math.floor(totalLength / 160)));
+  const arrowCount = Math.max(1, Math.min(5, Math.floor(totalLength / 120)));
   const step = totalLength / (arrowCount + 1);
 
   return Array.from({ length: arrowCount }, (_, index) =>
@@ -349,6 +350,165 @@ const formatPressureValue = (value) =>
 
 const formatFlowRateValue = (value) =>
   typeof value === 'number' ? `${value.toFixed(1)} L/min` : 'n/d';
+
+const formatPowerValue = (value) =>
+  typeof value === 'number' ? `${value.toFixed(2)} kW` : 'n/d';
+
+const formatForceValue = (value) =>
+  typeof value === 'number'
+    ? value >= 1000
+      ? `${(value / 1000).toFixed(2)} kN`
+      : `${Math.round(value)} N`
+    : 'n/d';
+
+const formatTorqueValue = (value) =>
+  typeof value === 'number' ? `${value.toFixed(1)} Nm` : 'n/d';
+
+const formatRpmValue = (value) =>
+  typeof value === 'number' ? `${Math.round(value)} rpm` : 'n/d';
+
+const formatLinearSpeedValue = (value) =>
+  typeof value === 'number' ? `${(value * 1000).toFixed(1)} mm/s` : 'n/d';
+
+const formatLengthValue = (value) =>
+  typeof value === 'number' ? `${Math.round(value)} mm` : 'n/d';
+
+const formatAreaValue = (value) =>
+  typeof value === 'number' ? `${value.toFixed(2)} cm2` : 'n/d';
+
+const formatPercentValue = (value) =>
+  typeof value === 'number' ? `${(value * 100).toFixed(0)}%` : 'n/d';
+
+const toSquareMetersFromMillimeters = (diameterMm) =>
+  Math.PI * ((diameterMm / 1000) ** 2) / 4;
+
+const toSquareCentimeters = (areaSquareMeters) => areaSquareMeters * 10000;
+
+const litersPerMinuteToCubicMetersPerSecond = (value) => value / 60000;
+
+const computeFluidPowerKw = (pressureBar, flowRateLpm) =>
+  typeof pressureBar === 'number' && typeof flowRateLpm === 'number'
+    ? (pressureBar * flowRateLpm) / 600
+    : null;
+
+const ENGINEERING_SPECS = {
+  source: {
+    hydraulic: {
+      nominalPressureBar: 140,
+      nominalFlowRateLpm: 22,
+      volumetricEfficiency: 0.92,
+      mechanicalEfficiency: 0.88,
+      displacementCcRev: 12,
+      shaftSpeedRpm: 1450,
+    },
+    pneumatic: {
+      nominalPressureBar: 6.5,
+      nominalFlowRateLpm: 280,
+      volumetricEfficiency: 0.9,
+      mechanicalEfficiency: 0.82,
+      displacementCcRev: 95,
+      shaftSpeedRpm: 1450,
+    },
+  },
+  valve: {
+    hydraulic: {
+      ratedPressureBar: 210,
+      nominalFlowRateLpm: 30,
+      pressureDropBar: 3.2,
+    },
+    pneumatic: {
+      ratedPressureBar: 10,
+      nominalFlowRateLpm: 700,
+      pressureDropBar: 0.35,
+    },
+  },
+  actuator: {
+    hydraulic: {
+      single: { boreMm: 50, rodMm: 0, strokeMm: 180, mechanicalEfficiency: 0.92 },
+      double: { boreMm: 63, rodMm: 36, strokeMm: 250, mechanicalEfficiency: 0.9 },
+      rotary: { displacementCcRev: 50, mechanicalEfficiency: 0.88 },
+    },
+    pneumatic: {
+      single: { boreMm: 32, rodMm: 0, strokeMm: 160, mechanicalEfficiency: 0.88 },
+      double: { boreMm: 40, rodMm: 16, strokeMm: 200, mechanicalEfficiency: 0.84 },
+      rotary: { displacementCcRev: 85, mechanicalEfficiency: 0.78 },
+    },
+  },
+  flowControl: {
+    hydraulic: { regulationRange: '25-100%', nominalFlowRateLpm: 18 },
+    pneumatic: { regulationRange: '25-100%', nominalFlowRateLpm: 250 },
+  },
+  sink: {
+    hydraulic: { reservoirVolumeL: 40, backPressureBar: 1.1 },
+    pneumatic: { exhaustPressureBar: 1.0, silencer: 'standard' },
+  },
+  conditioning: {
+    hydraulic: { filtrationMicron: 10, nominalFlowRateLpm: 25 },
+    pneumatic: { filtrationMicron: 40, regulatedPressureBar: 6, lubrication: 'micronebulizzata' },
+  },
+  instrument: {
+    hydraulic: { accuracyPctFs: 1.6, repeatabilityPct: 0.8 },
+    pneumatic: { accuracyPctFs: 1.6, repeatabilityPct: 0.8 },
+  },
+};
+
+const getEngineeringSpecs = (node, component, domain) => {
+  const defaults = getDomainSignalDefaults(domain);
+  const kind = component?.simBehavior?.kind;
+  const parameterOverrides =
+    typeof node?.parameters === 'object' && node.parameters ? node.parameters : {};
+
+  if (kind === 'actuator') {
+    const actuatorType = component.simBehavior.actuatorType;
+    return {
+      ...ENGINEERING_SPECS.actuator[domain]?.[actuatorType],
+      nominalPressureBar: defaults.nominalPressureBar,
+      ...parameterOverrides,
+    };
+  }
+
+  if (kind && ENGINEERING_SPECS[kind]?.[domain]) {
+    return {
+      ...ENGINEERING_SPECS[kind][domain],
+      ...parameterOverrides,
+    };
+  }
+
+  return {
+    nominalPressureBar: defaults.nominalPressureBar,
+    nominalFlowRateLpm: defaults.nominalFlowRateLpm,
+    ...parameterOverrides,
+  };
+};
+
+const getConnectedStatesForNode = (workspace, nodeId, connectionVisualStates) => {
+  const connectedStates = workspace.connections
+    .filter(
+      (connection) =>
+        connection.from.nodeId === nodeId || connection.to.nodeId === nodeId,
+    )
+    .map((connection) => ({
+      connection,
+      state: connectionVisualStates?.[connection.id] ?? null,
+    }));
+  const activeStates = connectedStates.filter(({ state }) => state?.active);
+  const pressureState =
+    activeStates.find(({ state }) => state?.phase === 'pressure')?.state ?? null;
+  const returnState =
+    activeStates.find(({ state }) => state?.phase === 'return')?.state ?? null;
+  const suctionState =
+    activeStates.find(({ state }) => state?.phase === 'suction')?.state ?? null;
+  const dominantState = pressureState ?? returnState ?? suctionState ?? activeStates[0]?.state ?? null;
+
+  return {
+    connectedStates,
+    activeStates,
+    dominantState,
+    pressureState,
+    returnState,
+    suctionState,
+  };
+};
 
 const describeActuatorState = (node, component) => {
   const routeInfo = getValveRouteInfo(node, component);
@@ -657,59 +817,33 @@ const buildInspector = (workspace) => {
   };
 };
 
-const buildInspectorDetails = (workspace, connectionVisualStates, measurementMap) => {
-  const baseInspector = buildInspector(workspace);
+const buildConnectionOperatingRows = (connection, state) => {
+  const fluidPowerKw =
+    state?.fluidPowerKw ?? computeFluidPowerKw(state?.pressureIn, state?.flowRate);
 
-  if (!workspace.selectedEntity) {
-    return {
-      ...baseInspector,
-      operatingRows: [],
-      selectedNodeId: null,
-      valveCommandType: null,
-    };
-  }
+  return [
+    ['Fase', getConnectionPhaseLabel(state?.phase ?? (connection?.kind === 'mechanical' ? 'mechanical' : 'pressure'))],
+    ['Direzione', getFlowDirectionLabel(state?.flowDirection)],
+    ['Portata', formatFlowRateValue(state?.flowRate)],
+    ['Pressione ingresso', formatPressureValue(state?.pressureIn)],
+    ['Pressione uscita', formatPressureValue(state?.pressureOut)],
+    ['Potenza fluida', formatPowerValue(fluidPowerKw)],
+  ];
+};
 
-  if (workspace.selectedEntity.type === 'connection') {
-    const connection = workspace.connections.find((item) => item.id === workspace.selectedEntity.id);
-    const state = connection ? connectionVisualStates?.[connection.id] ?? null : null;
-
-    return {
-      ...baseInspector,
-      operatingRows: [
-        ['Fase', getConnectionPhaseLabel(state?.phase ?? (connection?.kind === 'mechanical' ? 'mechanical' : 'pressure'))],
-        ['Direzione', getFlowDirectionLabel(state?.flowDirection)],
-        ['Portata', formatFlowRateValue(state?.flowRate)],
-        ['Pressione ingresso', formatPressureValue(state?.pressureIn)],
-        ['Pressione uscita', formatPressureValue(state?.pressureOut)],
-      ],
-      selectedNodeId: null,
-      valveCommandType: null,
-    };
-  }
-
-  const node = workspace.nodes.find((item) => item.instanceId === workspace.selectedEntity.id);
-  const component = node ? getComponentDefinition(node.componentId) : null;
-
-  if (!node || !component) {
-    return {
-      ...baseInspector,
-      operatingRows: [],
-      selectedNodeId: null,
-      valveCommandType: null,
-    };
-  }
-
-  const connectedStates = workspace.connections
-    .filter(
-      (connection) =>
-        connection.from.nodeId === node.instanceId || connection.to.nodeId === node.instanceId,
-    )
-    .map((connection) => ({
-      connection,
-      state: connectionVisualStates?.[connection.id] ?? null,
-    }));
-  const activeStates = connectedStates.filter(({ state }) => state?.active);
-  const dominantState = activeStates[0]?.state ?? connectedStates[0]?.state ?? null;
+const buildNodeTechnicalDetails = (
+  node,
+  component,
+  workspace,
+  connectionVisualStates,
+  measurementMap,
+  domain,
+) => {
+  const specs = getEngineeringSpecs(node, component, domain);
+  const connectionCount = workspace.connections.filter(
+    (connection) =>
+      connection.from.nodeId === node.instanceId || connection.to.nodeId === node.instanceId,
+  ).length;
   const activePortIds = component.ports
     .filter((port) => workspace.snapshot.activePorts.includes(`${node.instanceId}:${port.id}`))
     .map((port) => port.label);
@@ -720,34 +854,230 @@ const buildInspectorDetails = (workspace, connectionVisualStates, measurementMap
   const reading = measurementMap?.[node.instanceId] ?? null;
   const valveCommandType = node.state?.commandType ?? getDefaultValveCommandType(component);
   const valveCommand = getValveCommandOption(valveCommandType);
+  const { dominantState, pressureState, returnState, suctionState } = getConnectedStatesForNode(
+    workspace,
+    node.instanceId,
+    connectionVisualStates,
+  );
+  const livePressureBar =
+    pressureState?.pressureOut ??
+    pressureState?.pressureIn ??
+    dominantState?.pressureOut ??
+    dominantState?.pressureIn ??
+    null;
+  const liveFlowRateLpm =
+    pressureState?.flowRate ?? dominantState?.flowRate ?? returnState?.flowRate ?? null;
+  const fluidPowerKw =
+    pressureState?.fluidPowerKw ??
+    dominantState?.fluidPowerKw ??
+    computeFluidPowerKw(livePressureBar, liveFlowRateLpm);
+  const baseRows = [
+    ['Famiglia', KIND_LABELS[component.simBehavior.kind] ?? 'Componente'],
+    ['Biblioteca', node.libraryId ?? component.id],
+    ['Vendor ref', node.vendorRef?.trim() ? node.vendorRef : 'n/d'],
+    ['Porte collegate', `${connectionCount}`],
+    ['Posizione', `${node.x}, ${node.y}`],
+    ['Rotazione', `${node.rotation ?? 0} deg`],
+    [
+      'Stato interno',
+      component.simBehavior.kind === 'valve'
+        ? describeActuatorState(node, component)
+        : node.state?.currentState ?? describeActuatorState(node, component),
+    ],
+    [
+      'Attivo',
+      workspace.snapshot.activeNodes.includes(node.instanceId) ? 'Si' : 'No',
+    ],
+  ];
+  const specRows = [];
   const operatingRows = [];
 
+  if (component.simBehavior.kind === 'source') {
+    const globalEfficiency =
+      (specs.volumetricEfficiency ?? 1) * (specs.mechanicalEfficiency ?? 1);
+    const nominalFluidPowerKw = computeFluidPowerKw(
+      specs.nominalPressureBar,
+      specs.nominalFlowRateLpm,
+    );
+    const shaftPowerKw =
+      fluidPowerKw != null ? fluidPowerKw / Math.max(globalEfficiency, 0.1) : null;
+
+    specRows.push(
+      ['Pressione nominale', formatPressureValue(specs.nominalPressureBar)],
+      ['Portata nominale', formatFlowRateValue(specs.nominalFlowRateLpm)],
+      ['Potenza teorica nominale', formatPowerValue(nominalFluidPowerKw)],
+      ['Cilindrata', specs.displacementCcRev ? `${specs.displacementCcRev} cc/giro` : 'n/d'],
+      ['Rendimento globale', formatPercentValue(globalEfficiency)],
+      ['Velocita nominale', formatRpmValue(specs.shaftSpeedRpm)],
+    );
+    operatingRows.push(
+      ['Pressione mandata', formatPressureValue(livePressureBar)],
+      ['Pressione aspirazione', formatPressureValue(suctionState?.pressureIn)],
+      ['Portata erogata', formatFlowRateValue(liveFlowRateLpm)],
+      ['Potenza fluida', formatPowerValue(fluidPowerKw)],
+      ['Potenza albero', formatPowerValue(shaftPowerKw)],
+    );
+  }
+
   if (component.simBehavior.kind === 'valve') {
+    specRows.push(
+      ['Famiglia distributore', component.simBehavior.family],
+      ['Pressione nominale', formatPressureValue(specs.ratedPressureBar)],
+      ['Portata nominale', formatFlowRateValue(specs.nominalFlowRateLpm)],
+      ['Caduta di pressione', formatPressureValue(specs.pressureDropBar)],
+      ['Posizioni', `${component.simBehavior.states?.length ?? 0}`],
+    );
     operatingRows.push(
       ['Posizione', describeActuatorState(node, component)],
       ['Tipo comando', valveCommand?.label ?? 'n/d'],
       ['Porta in mandata', routeInfo?.activeWorkPort ?? 'n/d'],
       ['Porta di scarico', routeInfo?.activeReturnPort ?? 'n/d'],
+      ['Pressione ramo attivo', formatPressureValue(livePressureBar)],
+      ['Portata ramo attivo', formatFlowRateValue(liveFlowRateLpm)],
+      ['Potenza ramo attivo', formatPowerValue(fluidPowerKw)],
     );
   }
 
   if (component.simBehavior.kind === 'actuator') {
-    operatingRows.push(
-      ['Azione', workspace.snapshot.actuatorAction ?? 'Fermo'],
-      ['Porte attive', activePortIds.length > 0 ? activePortIds.join(', ') : 'Nessuna'],
-    );
+    const actuatorSpecs = specs;
+    const activePressureBar = livePressureBar;
 
-    if (workspace.snapshot.actuatorTiming) {
-      operatingRows.push([
-        'Tempo di corsa',
-        `${workspace.snapshot.actuatorTiming.actualStrokeTime}s`,
-      ]);
+    if (component.simBehavior.actuatorType === 'rotary') {
+      const displacementM3 = (actuatorSpecs.displacementCcRev ?? 0) / 1_000_000;
+      const litersPerRev = (actuatorSpecs.displacementCcRev ?? 0) / 1000;
+      const nominalTorqueNm =
+        actuatorSpecs.nominalPressureBar != null && displacementM3 > 0
+          ? ((actuatorSpecs.nominalPressureBar * 100000) * displacementM3 / (2 * Math.PI)) *
+            (actuatorSpecs.mechanicalEfficiency ?? 0.85)
+          : null;
+      const torqueNm =
+        typeof activePressureBar === 'number' && displacementM3 > 0
+          ? ((activePressureBar * 100000) * displacementM3 / (2 * Math.PI)) *
+            (actuatorSpecs.mechanicalEfficiency ?? 0.85)
+          : null;
+      const speedRpm =
+        typeof liveFlowRateLpm === 'number' && litersPerRev > 0
+          ? liveFlowRateLpm / litersPerRev
+          : null;
+
+      specRows.push(
+        ['Cilindrata', actuatorSpecs.displacementCcRev ? `${actuatorSpecs.displacementCcRev} cc/giro` : 'n/d'],
+        ['Rendimento meccanico', formatPercentValue(actuatorSpecs.mechanicalEfficiency)],
+        ['Pressione nominale', formatPressureValue(actuatorSpecs.nominalPressureBar)],
+        ['Coppia teorica max', formatTorqueValue(nominalTorqueNm)],
+      );
+      operatingRows.push(
+        ['Azione', workspace.snapshot.actuatorAction ?? 'Fermo'],
+        ['Pressione attiva', formatPressureValue(activePressureBar)],
+        ['Portata attiva', formatFlowRateValue(liveFlowRateLpm)],
+        ['Potenza fluida', formatPowerValue(fluidPowerKw)],
+        ['Coppia stimata', formatTorqueValue(torqueNm)],
+        ['Velocita stimata', formatRpmValue(speedRpm)],
+      );
+    } else {
+      const boreArea = toSquareMetersFromMillimeters(actuatorSpecs.boreMm ?? 0);
+      const rodArea = toSquareMetersFromMillimeters(actuatorSpecs.rodMm ?? 0);
+      const annularArea = Math.max(boreArea - rodArea, 0);
+      const isRetracting =
+        workspace.snapshot.actuatorAction?.includes('ritraz') ||
+        (routeInfo?.activeWorkPort === 'B' && component.simBehavior.actuatorType === 'double');
+      const effectiveArea =
+        component.simBehavior.actuatorType === 'double' && isRetracting
+          ? annularArea || boreArea
+          : boreArea;
+      const forceN =
+        typeof activePressureBar === 'number' && effectiveArea > 0
+          ? (activePressureBar * 100000) * effectiveArea * (actuatorSpecs.mechanicalEfficiency ?? 0.9)
+          : null;
+      const nominalForceN =
+        actuatorSpecs.nominalPressureBar != null && effectiveArea > 0
+          ? (actuatorSpecs.nominalPressureBar * 100000) * effectiveArea *
+            (actuatorSpecs.mechanicalEfficiency ?? 0.9)
+          : null;
+      const linearSpeedMps =
+        typeof liveFlowRateLpm === 'number' && effectiveArea > 0
+          ? litersPerMinuteToCubicMetersPerSecond(liveFlowRateLpm) / effectiveArea
+          : null;
+
+      specRows.push(
+        ['Alesaggio', formatLengthValue(actuatorSpecs.boreMm)],
+        ['Stelo', formatLengthValue(actuatorSpecs.rodMm)],
+        ['Corsa', formatLengthValue(actuatorSpecs.strokeMm)],
+        ['Area camera A', formatAreaValue(toSquareCentimeters(boreArea))],
+        ['Area camera B', formatAreaValue(toSquareCentimeters(annularArea || boreArea))],
+        ['Forza teorica max', formatForceValue(nominalForceN)],
+      );
+      operatingRows.push(
+        ['Azione', workspace.snapshot.actuatorAction ?? 'Fermo'],
+        ['Porte attive', activePortIds.length > 0 ? activePortIds.join(', ') : 'Nessuna'],
+        ['Pressione attiva', formatPressureValue(activePressureBar)],
+        ['Portata attiva', formatFlowRateValue(liveFlowRateLpm)],
+        ['Potenza fluida', formatPowerValue(fluidPowerKw)],
+        ['Forza stimata', formatForceValue(forceN)],
+        ['Velocita stimata', formatLinearSpeedValue(linearSpeedMps)],
+      );
+
+      if (workspace.snapshot.actuatorTiming) {
+        operatingRows.push([
+          'Tempo di corsa',
+          `${workspace.snapshot.actuatorTiming.actualStrokeTime}s`,
+        ]);
+      }
     }
   }
 
   if (component.simBehavior.kind === 'flowControl') {
     const flowMultiplier = node.state?.flowMultiplier ?? component.simBehavior.flowMultiplier ?? 1;
-    operatingRows.push(['Apertura regolatore', `${Math.round(flowMultiplier * 100)}%`]);
+
+    specRows.push(
+      ['Campo regolazione', specs.regulationRange ?? 'n/d'],
+      ['Portata nominale', formatFlowRateValue(specs.nominalFlowRateLpm)],
+    );
+    operatingRows.push(
+      ['Apertura regolatore', `${Math.round(flowMultiplier * 100)}%`],
+      ['Pressione a monte', formatPressureValue(pressureState?.pressureIn)],
+      ['Pressione a valle', formatPressureValue(pressureState?.pressureOut)],
+      ['Portata controllata', formatFlowRateValue(liveFlowRateLpm)],
+      ['Potenza trasmessa', formatPowerValue(fluidPowerKw)],
+    );
+  }
+
+  if (component.simBehavior.kind === 'sink') {
+    if (domain === 'hydraulic') {
+      specRows.push(
+        ['Volume serbatoio', specs.reservoirVolumeL ? `${specs.reservoirVolumeL} L` : 'n/d'],
+        ['Contropressione tipica', formatPressureValue(specs.backPressureBar)],
+      );
+    } else {
+      specRows.push(
+        ['Pressione scarico', formatPressureValue(specs.exhaustPressureBar)],
+        ['Silenziatore', specs.silencer ?? 'n/d'],
+      );
+    }
+    operatingRows.push(
+      ['Portata di ritorno', formatFlowRateValue(returnState?.flowRate ?? liveFlowRateLpm)],
+      ['Pressione di ritorno', formatPressureValue(returnState?.pressureIn ?? livePressureBar)],
+    );
+  }
+
+  if (component.simBehavior.kind === 'conditioning') {
+    specRows.push(
+      ['Filtrazione', specs.filtrationMicron ? `${specs.filtrationMicron} micron` : 'n/d'],
+      ['Pressione regolata', formatPressureValue(specs.regulatedPressureBar)],
+      ['Lubrificazione', specs.lubrication ?? 'n/d'],
+    );
+    operatingRows.push(
+      ['Pressione attiva', formatPressureValue(livePressureBar)],
+      ['Portata attiva', formatFlowRateValue(liveFlowRateLpm)],
+      ['Potenza fluida', formatPowerValue(fluidPowerKw)],
+    );
+  }
+
+  if (component.simBehavior.kind === 'instrument') {
+    specRows.push(
+      ['Accuratezza', specs.accuracyPctFs ? `${specs.accuracyPctFs}% FS` : 'n/d'],
+      ['Ripetibilita', specs.repeatabilityPct ? `${specs.repeatabilityPct}%` : 'n/d'],
+    );
   }
 
   if (reading?.pressure != null) {
@@ -766,19 +1096,73 @@ const buildInspectorDetails = (workspace, connectionVisualStates, measurementMap
     operatingRows.push(
       ['Fase circuito', getConnectionPhaseLabel(dominantState?.phase)],
       ['Direzione flusso', getFlowDirectionLabel(dominantState?.flowDirection)],
-      ['Portata stimata', formatFlowRateValue(dominantState?.flowRate)],
-      ['Pressione ingresso', formatPressureValue(dominantState?.pressureIn)],
-      ['Pressione uscita', formatPressureValue(dominantState?.pressureOut)],
     );
   }
 
   return {
-    ...baseInspector,
+    title: node.label,
     subtitle: component.description,
+    rows: baseRows,
+    specRows,
     operatingRows,
+    ports: component.ports.map((port) => `${port.label} (${port.side})`),
     selectedNodeId: node.instanceId,
     valveCommandType,
+    hoverSections: [
+      { id: 'base', label: 'Identificazione', rows: baseRows },
+      { id: 'spec', label: 'Caratteristiche nominali', rows: specRows },
+      { id: 'live', label: 'Dati live', rows: operatingRows },
+    ].filter((section) => section.rows.length > 0),
   };
+};
+
+const buildInspectorDetails = (workspace, connectionVisualStates, measurementMap, domain) => {
+  const baseInspector = buildInspector(workspace);
+
+  if (!workspace.selectedEntity) {
+    return {
+      ...baseInspector,
+      specRows: [],
+      operatingRows: [],
+      selectedNodeId: null,
+      valveCommandType: null,
+    };
+  }
+
+  if (workspace.selectedEntity.type === 'connection') {
+    const connection = workspace.connections.find((item) => item.id === workspace.selectedEntity.id);
+    const state = connection ? connectionVisualStates?.[connection.id] ?? null : null;
+
+    return {
+      ...baseInspector,
+      specRows: [],
+      operatingRows: buildConnectionOperatingRows(connection, state),
+      selectedNodeId: null,
+      valveCommandType: null,
+    };
+  }
+
+  const node = workspace.nodes.find((item) => item.instanceId === workspace.selectedEntity.id);
+  const component = node ? getComponentDefinition(node.componentId) : null;
+
+  if (!node || !component) {
+    return {
+      ...baseInspector,
+      specRows: [],
+      operatingRows: [],
+      selectedNodeId: null,
+      valveCommandType: null,
+    };
+  }
+
+  return buildNodeTechnicalDetails(
+    node,
+    component,
+    workspace,
+    connectionVisualStates,
+    measurementMap,
+    domain,
+  );
 };
 
 const FluidPowerLabPage = () => {
@@ -787,6 +1171,7 @@ const FluidPowerLabPage = () => {
   const [storageStatus, setStorageStatus] = useState('Autosave locale pronto.');
   const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
 
@@ -907,8 +1292,8 @@ const FluidPowerLabPage = () => {
   );
 
   const inspector = useMemo(
-    () => buildInspectorDetails(workspace, connectionVisualStates, measurementMap),
-    [workspace, connectionVisualStates, measurementMap],
+    () => buildInspectorDetails(workspace, connectionVisualStates, measurementMap, domain),
+    [workspace, connectionVisualStates, measurementMap, domain],
   );
   const bomItems = useMemo(() => buildBillOfMaterials(workspace), [workspace]);
 
@@ -1491,7 +1876,7 @@ const FluidPowerLabPage = () => {
                       workspace.selectedEntity.id === connection.id;
                     const flowArrows = isActive && !isMechanical
                       ? computeFlowArrows(connection.pathPoints, {
-                        arrowSize: 7,
+                        arrowSize: 12,
                         reverse: visualState.flowDirection === 'reverse',
                       })
                       : [];
@@ -1553,6 +1938,14 @@ const FluidPowerLabPage = () => {
                         node.state?.commandType ?? getDefaultValveCommandType(component),
                       )
                       : null;
+                  const technicalDetails = buildNodeTechnicalDetails(
+                    node,
+                    component,
+                    workspace,
+                    connectionVisualStates,
+                    measurementMap,
+                    domain,
+                  );
                   const flowPct = isFlowControl
                     ? Math.round((node.state?.flowMultiplier ?? component.simBehavior.flowMultiplier ?? 1.0) * 100)
                     : null;
@@ -1568,6 +1961,10 @@ const FluidPowerLabPage = () => {
                         top: node.y,
                       }}
                       onPointerDown={(event) => handleNodePointerDown(event, node)}
+                      onMouseEnter={() => setHoveredNodeId(node.instanceId)}
+                      onMouseLeave={() =>
+                        setHoveredNodeId((current) => (current === node.instanceId ? null : current))
+                      }
                       onClick={() =>
                         updateWorkspace((current) => ({
                           ...current,
@@ -1575,6 +1972,32 @@ const FluidPowerLabPage = () => {
                         }))
                       }
                       >
+                        {hoveredNodeId === node.instanceId && (
+                          <div
+                            className="fluid-node-hovercard"
+                            role="note"
+                            aria-label={`Caratteristiche ${node.label}`}
+                            onPointerDown={(event) => event.stopPropagation()}
+                          >
+                            <div className="fluid-node-hovercard-head">
+                              <strong>{node.label}</strong>
+                              <span>{component.label}</span>
+                            </div>
+                            {technicalDetails.hoverSections.map((section) => (
+                              <div key={`${node.instanceId}-${section.id}`} className="fluid-node-hovercard-section">
+                                <span className="fluid-node-hovercard-label">{section.label}</span>
+                                <div className="fluid-node-hovercard-rows">
+                                  {section.rows.map(([label, value]) => (
+                                    <div key={`${section.id}-${label}`} className="fluid-node-hovercard-row">
+                                      <span>{label}</span>
+                                      <strong>{value}</strong>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="fluid-node-header">
                         <div className="fluid-node-title-stack">
                           <span className="fluid-node-title">{node.label}</span>
@@ -1798,6 +2221,20 @@ const FluidPowerLabPage = () => {
                       </div>
                     ))}
                   </div>
+
+                  {inspector.specRows?.length > 0 && (
+                    <div className="fluid-inspector-section">
+                      <span className="stat-card-label">Caratteristiche nominali</span>
+                      <div className="fluid-inspector-rows">
+                        {inspector.specRows.map(([label, value]) => (
+                          <div key={`${label}-${value}`} className="fluid-inspector-row">
+                            <span>{label}</span>
+                            <strong>{value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {inspector.operatingRows?.length > 0 && (
                     <div className="fluid-inspector-section">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import FluidPowerLabPage from './FluidPowerLabPage';
 import { FLUID_POWER_PROJECT_STORAGE_KEY } from '../utils/fluidPowerProject';
 
@@ -70,6 +70,25 @@ describe('FluidPowerLabPage', () => {
     });
 
     expect(screen.getAllByText(/Solenoide/i).length).toBeGreaterThan(0);
+  });
+
+  test('shows full technical characteristics on component hover', () => {
+    render(<FluidPowerLabPage />);
+
+    addComponent(/^Aggiungi Pompa idraulica$/i);
+
+    const nodeTitle = screen.getAllByText(/Pompa idraulica 1/i)[0];
+    const nodeCard = nodeTitle.closest('.fluid-node');
+
+    expect(nodeCard).not.toBeNull();
+
+    fireEvent.mouseEnter(nodeCard);
+
+    const hoverCard = screen.getByRole('note', { name: /Caratteristiche Pompa idraulica 1/i });
+
+    expect(within(hoverCard).getByText(/Caratteristiche nominali/i)).toBeInTheDocument();
+    expect(within(hoverCard).getByText(/Potenza albero/i)).toBeInTheDocument();
+    expect(within(hoverCard).getByText(/Portata nominale/i)).toBeInTheDocument();
   });
 
   test('persists autosave without project mode metadata', async () => {

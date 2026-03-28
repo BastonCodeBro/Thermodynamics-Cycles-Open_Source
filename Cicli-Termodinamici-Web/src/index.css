@@ -74,7 +74,8 @@ p { margin: 0; }
   content: '';
   position: fixed;
   inset: 0;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: default;
   background:
     linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px);
@@ -2166,7 +2167,7 @@ p { margin: 0; }
 }
 
 .fluid-flow-arrow {
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.18));
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.24));
   animation: fluidArrowPulse 1.1s ease-in-out infinite alternate;
 }
 
@@ -2189,10 +2190,16 @@ p { margin: 0; }
   gap: 0.35rem;
   cursor: grab;
   user-select: none;
+  overflow: visible;
+  isolation: isolate;
 }
 
 .fluid-node:active {
   cursor: grabbing;
+}
+
+.fluid-node:hover {
+  z-index: 8;
 }
 
 .fluid-node-selected {
@@ -2234,6 +2241,102 @@ p { margin: 0; }
 .fluid-node-title-stack {
   display: grid;
   gap: 0.15rem;
+}
+
+.fluid-node-hovercard {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.9rem);
+  transform: translateX(-50%);
+  min-width: 260px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 0.8rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 28, 0.98)),
+    rgba(8, 15, 28, 0.96);
+  box-shadow:
+    0 22px 46px rgba(2, 6, 23, 0.58),
+    0 0 0 1px rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(18px);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.fluid-node-hovercard::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 1px solid rgba(56, 189, 248, 0.22);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+  background: rgba(8, 15, 28, 0.98);
+}
+
+.fluid-node-hovercard-head {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.65rem;
+}
+
+.fluid-node-hovercard-head strong {
+  font-size: 0.82rem;
+  color: #F8FAFC;
+}
+
+.fluid-node-hovercard-head span {
+  font-size: 0.68rem;
+  color: #94A3B8;
+}
+
+.fluid-node-hovercard-section {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.55rem;
+  margin-top: 0.55rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fluid-node-hovercard-section:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+
+.fluid-node-hovercard-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #38BDF8;
+}
+
+.fluid-node-hovercard-rows {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.fluid-node-hovercard-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-size: 0.68rem;
+}
+
+.fluid-node-hovercard-row span {
+  color: #94A3B8;
+}
+
+.fluid-node-hovercard-row strong {
+  color: #F8FAFC;
+  text-align: right;
 }
 
 .fluid-node-selection-chip {

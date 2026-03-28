@@ -366,15 +366,16 @@ const buildSuctionPath = (adjacency, sourceNode, sourceComponent, sinkNode, sink
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure') => {
+const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure', domain = 'hydraulic') => {
+  const defaults = getDomainSignalDefaults(domain);
   const restrictions = collectRestrictionsOnPath(pathPorts, nodeLookup);
   let pressure =
     phase === 'pressure'
-      ? BASE_SYSTEM_PRESSURE
+      ? defaults.nominalPressureBar
       : phase === 'suction'
-        ? BASE_SYSTEM_PRESSURE * 0.12
-        : BASE_SYSTEM_PRESSURE * 0.2;
-  let flowRate = BASE_FLOW_RATE;
+        ? defaults.suctionPressureBar
+        : defaults.returnPressureBar;
+  let flowRate = defaults.nominalFlowRateLpm;
   let velocityFactor = phase === 'pressure' ? 1 : phase === 'mechanical' ? 1.8 : 0.78;
 
   for (const restriction of restrictions) {
@@ -410,12 +411,17 @@ const buildConnectionStateEntries = (
   phase,
   nodeLookup,
   flowDirection = 'forward',
+  domain = 'hydraulic',
 ) => {
   if (!path) {
     return {};
   }
 
-  const signal = resolveSignalForPath(path.ports ?? [], nodeLookup, phase);
+  const signal = resolveSignalForPath(path.ports ?? [], nodeLookup, phase, domain);
+  const fluidPowerKw =
+    phase === 'mechanical' || signal.flowRate == null || signal.pressure == null
+      ? null
+      : Math.round(((signal.pressure * signal.flowRate) / 600) * 100) / 100;
 
   return Object.fromEntries(
     uniqueArray(path.connectionIds ?? []).map((connectionId) => [
@@ -432,6 +438,7 @@ const buildConnectionStateEntries = (
             : Math.round(
                 Math.max(signal.pressure - (phase === 'pressure' ? 8 : 3), 0) * 10,
               ) / 10,
+        fluidPowerKw,
         velocityFactor: signal.velocityFactor,
       },
     ]),
@@ -464,6 +471,7 @@ const materializeConnectionStates = (connections, activeStates) =>
         flowRate: null,
         pressureIn: null,
         pressureOut: null,
+        fluidPowerKw: null,
         velocityFactor: 1,
         ...(activeStates[connection.id] ?? {}),
       },
@@ -602,6 +610,7 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
           activeConnectionIds,
           nodes,
           nodeLookup,
+          domain,
         );
 
         return {
@@ -625,8 +634,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
           connectionStates: materializeConnectionStates(
             connections,
             mergeConnectionStateEntries(
-              buildConnectionStateEntries(exhaustPath, 'return', nodeLookup, 'reverse'),
-              buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward'),
+              buildConnectionStateEntries(exhaustPath, 'return', nodeLookup, 'reverse', domain),
+              buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward', domain),
               mechanicalState.connectionStates,
             ),
           ),
@@ -716,11 +725,11 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
 
   const allActivePorts = uniqueArray(activePortKeys);
   const pathConnectionStates = mergeConnectionStateEntries(
-    buildConnectionStateEntries(validation.details.paths.supplyPath, 'pressure', nodeLookup, 'forward'),
-    buildConnectionStateEntries(activeWorkPath, 'pressure', nodeLookup, 'forward'),
-    buildConnectionStateEntries(validation.details.paths.returnPath, 'return', nodeLookup, 'forward'),
-    buildConnectionStateEntries(passiveExhaustPath, 'return', nodeLookup, 'reverse'),
-    buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward'),
+    buildConnectionStateEntries(validation.details.paths.supplyPath, 'pressure', nodeLookup, 'forward', domain),
+    buildConnectionStateEntries(activeWorkPath, 'pressure', nodeLookup, 'forward', domain),
+    buildConnectionStateEntries(validation.details.paths.returnPath, 'return', nodeLookup, 'forward', domain),
+    buildConnectionStateEntries(passiveExhaustPath, 'return', nodeLookup, 'reverse', domain),
+    buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward', domain),
     mechanicalState.connectionStates,
   );
 
@@ -740,6 +749,7 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
     allActiveConnections,
     nodes,
     nodeLookup,
+    domain,
   );
 
   const actuatorTiming = computeActuatorTiming(
@@ -799,8 +809,23 @@ export const applyValveState = (nodes, nodeId, nextState) =>
     };
   });
 
-const BASE_SYSTEM_PRESSURE = 100;
-const BASE_FLOW_RATE = 12;
+const DOMAIN_SIGNAL_DEFAULTS = {
+  hydraulic: {
+    nominalPressureBar: 140,
+    nominalFlowRateLpm: 22,
+    returnPressureBar: 4.5,
+    suctionPressureBar: 0.9,
+  },
+  pneumatic: {
+    nominalPressureBar: 6.5,
+    nominalFlowRateLpm: 280,
+    returnPressureBar: 1.15,
+    suctionPressureBar: 1.0,
+  },
+};
+
+export const getDomainSignalDefaults = (domain = 'hydraulic') =>
+  DOMAIN_SIGNAL_DEFAULTS[domain] ?? DOMAIN_SIGNAL_DEFAULTS.hydraulic;
 
 const collectRestrictionsOnPath = (pathPorts, nodeLookup) => {
   const restrictions = [];
@@ -851,8 +876,15 @@ const collectRestrictionsOnPath = (pathPorts, nodeLookup) => {
   return restrictions;
 };
 
-export const computeReadings = (activePorts, activeConnections, nodes, nodeLookup) => {
+export const computeReadings = (
+  activePorts,
+  activeConnections,
+  nodes,
+  nodeLookup,
+  domain = 'hydraulic',
+) => {
   const readings = {};
+  const defaults = getDomainSignalDefaults(domain);
 
   for (const node of nodeLookup.values()) {
     const component = getComponentDefinition(node.componentId);
@@ -875,8 +907,8 @@ export const computeReadings = (activePorts, activeConnections, nodes, nodeLooku
     }
 
     const style = component.symbolVariant?.style;
-    let pressure = BASE_SYSTEM_PRESSURE * 0.85;
-    let flowRate = BASE_FLOW_RATE * 0.9;
+    let pressure = defaults.nominalPressureBar * 0.85;
+    let flowRate = defaults.nominalFlowRateLpm * 0.9;
 
     for (const portRef of activePorts) {
       if (!portRef.startsWith(`${node.instanceId}:`)) {
